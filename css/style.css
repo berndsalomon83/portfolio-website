@@ -27,6 +27,7 @@
 *,
 *::before,
 *::after { box-sizing: border-box; }
+[hidden] { display: none !important; }
 
 html {
   background: var(--bg);
@@ -214,7 +215,6 @@ main { position: relative; z-index: 2; }
 
 /* Season control: a nav button that opens a small glass panel with a slider through the year */
 .season { position: relative; display: inline-flex; }
-.season[hidden] { display: none; }
 .season__toggle {
   display: inline-flex;
   align-items: center;
@@ -390,8 +390,8 @@ main { position: relative; z-index: 2; }
   text-transform: uppercase;
   color: var(--ink-soft);
 }
-.eyebrow { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; }
-.eyebrow .dot { width: 4px; height: 4px; border-radius: 50%; background: var(--gold); }
+.eyebrow .nw { white-space: nowrap; }
+.eyebrow .dot { display: inline-block; width: 4px; height: 4px; margin: 0 12px 0 9px; vertical-align: 0.2em; border-radius: 50%; background: var(--gold); }
 .kicker span {
   display: inline-block;
   margin-right: 12px;
@@ -811,8 +811,21 @@ main { position: relative; z-index: 2; }
   font-size: 0.78rem;
   letter-spacing: 0.04em;
   color: var(--ink-mute);
+  align-items: center;
 }
-.footer__note { font-style: italic; font-family: var(--serif); font-size: 0.86rem; }
+/* Signed by hand: the line writes itself in when the forest floor comes into view. */
+.signature {
+  padding: 2px 4px 4px;
+  font-family: 'La Belle Aurore', var(--serif);
+  font-size: 1.4em; /* thin strokes and a small lowercase: this is what looks as big as the © line */
+  color: var(--ink-soft);
+  line-height: 1;
+  letter-spacing: 0;
+  text-shadow: 0 1px 10px rgba(4, 9, 6, 0.75);
+  transform: rotate(-1.5deg);
+}
+.js .signature { clip-path: inset(0 100% 0 0); transition: clip-path 2.4s cubic-bezier(0.45, 0.05, 0.4, 1) 2.2s; }
+.js .is-in .signature { clip-path: inset(0 0 0 0); }
 
 /* ── Reveal on scroll ──────────────────────────────────────── */
 
@@ -891,21 +904,25 @@ a:focus-visible { outline: 2px solid var(--gold); outline-offset: 4px; border-ra
   .finale__sub { font-size: 0.86rem; }
   .contact-list dd { font-size: 0.84rem; }
   .chapter--contact .footer { position: absolute; left: var(--gutter); right: var(--gutter); bottom: 0; width: auto; padding-bottom: 14px; font-size: 0.7rem; }
-  .footer__note { display: none; }
   .scrim {
     background:
       linear-gradient(180deg, rgba(4, 9, 6, 0.45) 0%, rgba(4, 9, 6, 0.22) 30%, rgba(4, 9, 6, 0.3) 62%, rgba(4, 9, 6, 0.5) 100%);
   }
 }
 
+
 @media (max-width: 480px) {
-  .footer { justify-content: center; text-align: center; }
+  /* long facts read better with the label above the value */
+  .about__body .facts div { flex-direction: column; gap: 3px; padding: 10px 0; }
+  .about__body .facts dt { font-size: 0.8rem; }
+  .about__body .facts dd { text-align: left; }
 }
 
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
   .js .reveal,
   .finale__line .w { transition-duration: 0.01ms; transition-delay: 0ms; filter: none; transform: none; }
+  .js .signature { clip-path: none; transition: none; }
   .scroll-cue__line::after,
   .pulse,
   .loader__stem,

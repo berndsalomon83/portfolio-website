@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>Bernd Salomon — Senior Developer &amp; Solution Architect</title>
-  <meta name="description" content="Bernd Salomon, senior developer and solution architect in Sweden. Twenty years of turning hard problems into software that runs: architecture, data platforms and AI, used properly." />
+  <meta name="description" content="Bernd Salomon, freelance senior developer and solution architect based in Sweden, working remotely across Europe. Twenty years of turning hard problems into software that runs: architecture, data platforms and AI, used properly." />
   <meta name="theme-color" content="#0b140e" />
   <meta property="og:type" content="website" />
   <meta property="og:url" content="https://berndsalomon83.github.io/portfolio-website/" />
@@ -23,13 +23,39 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..600;1,9..144,300..600&family=Inter:wght@300..600&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=La+Belle+Aurore&display=swap&text=Built%20togehwiClaud" rel="stylesheet" />
   <link rel="stylesheet" href="css/style.css" />
 
-  <script>document.documentElement.classList.replace('no-js', 'js');</script>
+  <script>
+    document.documentElement.classList.replace('no-js', 'js');
+    // If the forest's scripts can't load at all (e.g. a firewall blocks the CDN), show the plain page.
+    window.forestFallback = function () {
+      var run = function () {
+        document.documentElement.classList.add('no-webgl');
+        var loader = document.getElementById('loader');
+        if (loader) loader.classList.add('is-done');
+        document.querySelectorAll('[data-chapter]').forEach(function (c) { c.classList.add('is-in'); });
+        document.querySelectorAll('[data-mail]').forEach(function (a) {
+          var p = a.dataset.mail.split('|');
+          a.href = 'mailto:' + p[0] + '@' + p[1];
+          if (a.hasAttribute('data-show')) a.textContent = p[0] + '@' + p[1];
+        });
+        document.querySelectorAll('[data-tel]').forEach(function (a) {
+          var n = a.dataset.tel.split('|').join(' ');
+          a.href = 'tel:' + n.replace(/[^0-9+]/g, '');
+          a.textContent = n;
+        });
+        var sound = document.querySelector('.nav__sound');
+        if (sound) sound.hidden = true;
+      };
+      if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', run);
+      else run();
+    };
+  </script>
   <script type="importmap">
     { "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js" } }
   </script>
-  <script type="module" src="js/main.js"></script>
+  <script type="module" src="js/main.js" onerror="forestFallback()"></script>
 </head>
 
 <body>
@@ -95,7 +121,7 @@
     <!-- 00 · HERO ─────────────────────────────────────────────── -->
     <section id="hero" class="chapter chapter--hero" data-chapter>
       <div class="hero">
-        <p class="eyebrow reveal">Senior Developer &amp; Solution Architect <span class="dot"></span> Sweden</p>
+        <p class="eyebrow reveal">Senior Developer &amp; Solution <span class="nw">Architect<span class="dot"></span>Sweden</span></p>
         <h1 class="hero__name reveal" style="--d: 1">
           <span>Bernd</span>
           <em>Salomon</em>
@@ -125,14 +151,13 @@
               and day-to-day production.
             </p>
             <p>
-              Moving to Sweden was a big step: 1,500 km from home, a new language to learn, a new
+              Moving to Sweden was a big step: 1,500 km from my old home, a new language to learn, a new
               culture to grow into. But when I'm in, no step is too big.
             </p>
             <p>
               I work spec-driven, with security by design, tests first and decisions written down.
               I bring the same discipline to AI: I steer it deliberately instead of letting it run
-              blind. To develop and test LLM solutions I run my own NVIDIA DGX Spark, private inference
-              that doesn't depend on anyone's cloud API.
+              blind.
             </p>
             <p>
               Honestly? I love this work. The problem nobody has cracked yet, the moment a design finally
@@ -142,7 +167,9 @@
             <dl class="facts">
               <div><dt>Home</dt><dd>Säffle, Sweden</dd></div>
               <div><dt>Focus</dt><dd>Architecture · data platforms · AI</dd></div>
-              <div><dt>Languages</dt><dd>German · English · Swedish (learning)</dd></div>
+              <div><dt>Work</dt><dd>Freelance, or permanent for the right company</dd></div>
+              <div><dt>Remote</dt><dd>Anywhere in Europe · on site to kick off, then every other month</dd></div>
+              <div><dt>Languages</dt><dd>German (native) · English (fluent) · Swedish (learning)</dd></div>
               <div><dt>Status</dt><dd><span class="pulse"></span>Available now</dd></div>
             </dl>
           </div>
@@ -185,7 +212,7 @@
           <article class="card glass reveal" style="--d: 2">
             <div class="card__meta"><span>02</span><span>2017 – 2026</span></div>
             <h3 class="card__title">Energy data for an entire corporate group</h3>
-            <p class="card__text">Built and ran Deutsche Bahn's group-wide energy information system: from taking over data from many source systems to aggregating it across every group company, on an event-driven AWS stack.</p>
+            <p class="card__text">Built and ran Deutsche Bahn's group-wide energy information system: from ingesting data from many source systems to aggregating it across every group company, on an event-driven AWS stack.</p>
             <ul class="tags"><li>AWS</li><li>Airflow</li><li>Lambda &amp; Athena</li><li>Python</li><li>Terraform</li></ul>
             <p class="card__org">DB Systel · Deutsche Bahn</p>
           </article>
@@ -215,22 +242,22 @@
         <div class="exp__grid">
           <ol class="timeline glass reveal" style="--d: 2">
             <li>
-              <span class="timeline__when">2017 — 2026</span>
+              <span class="timeline__when">2017 – 2026</span>
               <h3>Senior DevOps &amp; Data Engineer</h3>
               <p>DB Systel · Deutsche Bahn. Group-wide data platforms on AWS, CI/CD with security hardening and automated dependency updates, test-driven development with a rule-based test data generator, an AI-assisted development practice, and mentoring new colleagues, apprentices and students.</p>
             </li>
             <li>
-              <span class="timeline__when">2012 — 2017</span>
+              <span class="timeline__when">2012 – 2017</span>
               <h3>Senior Developer, BI Competence Center</h3>
               <p>DB Cargo · Deutsche Bahn. Built the company's business intelligence from the ground up and led a small development team.</p>
             </li>
             <li>
-              <span class="timeline__when">2007 — 2012</span>
+              <span class="timeline__when">2007 – 2012</span>
               <h3>Developer</h3>
               <p>DB Systel · Deutsche Bahn. Group-wide data integration for transport costs and energy use, and KPI reporting on staff and personnel costs for decision-makers.</p>
             </li>
             <li>
-              <span class="timeline__when">2003 — 2007</span>
+              <span class="timeline__when">2003 – 2007</span>
               <h3>Where it started</h3>
               <p>Apprenticeship as an IT specialist in application development, then junior developer, promoted within a year.</p>
             </li>
@@ -246,15 +273,20 @@
             <h4 class="toolkit__group">Data &amp; backend</h4>
             <ul class="chips">
               <li>Python</li><li>SQL</li><li>Bash</li><li>Airflow</li><li>DuckDB &amp; Polars</li>
-              <li>FastAPI</li><li>Data modelling</li><li>Relational to NoSQL</li><li>Rust &amp; C++</li>
+              <li>FastAPI</li><li>Data modelling</li><li>Data Vault</li><li>ETL / ELT</li><li>Rust &amp; C++</li>
+            </ul>
+            <h4 class="toolkit__group">Databases &amp; BI</h4>
+            <ul class="chips">
+              <li>PostgreSQL</li><li>Oracle / Exadata</li><li>MS SQL Server</li><li>Redshift</li><li>DynamoDB</li>
+              <li>SQLite</li><li>Power BI</li><li>SAP BusinessObjects</li>
             </ul>
             <h4 class="toolkit__group">Platform &amp; practice</h4>
             <ul class="chips">
               <li>AWS serverless</li><li>Docker &amp; Kubernetes</li><li>Terraform</li><li>Linux</li>
               <li>GitHub Actions &amp; GitOps</li><li>Spec-driven development</li><li>TDD (pytest)</li>
-              <li>Security by design</li><li>ISO 27001 environments</li>
+              <li>Security by design</li><li>Requirements engineering</li><li>ISO 27001 environments</li>
             </ul>
-            <p class="toolkit__note">Like the forest: a mix of fast-growing birches and slow, steady pines.</p>
+            <p class="toolkit__note">Not on the list? Whatever the job needs, I pick up fast.</p>
           </div>
         </div>
       </div>
@@ -273,20 +305,22 @@
           <!-- addresses and numbers are assembled by js/ui.js so simple scrapers can't harvest them -->
           <dl class="facts contact-list">
             <div><dt>E-mail</dt><dd><a data-mail="bernd.salomon.83|gmail.com" data-show></a></dd></div>
-            <div><dt>Phone · Germany</dt><dd><a data-tel="+49 176|2099 1360"></a></dd></div>
             <div><dt>Phone · Sweden</dt><dd><a data-tel="+46 70|206 39 41"></a></dd></div>
+            <div><dt>Phone · Germany</dt><dd><a data-tel="+49 176|2099 1360"></a></dd></div>
           </dl>
           <noscript><p class="finale__sub">bernd.salomon.83 [at] gmail.com</p></noscript>
           <div class="finale__actions">
             <a class="btn btn--primary" href="#contact" data-mail="bernd.salomon.83|gmail.com">Say hej <span aria-hidden="true">→</span></a>
             <a class="btn" href="https://github.com/berndsalomon83" target="_blank" rel="noopener">GitHub</a>
             <a class="btn" href="https://www.linkedin.com/in/bernd-salomon-44ab58305/" target="_blank" rel="noopener">LinkedIn</a>
+            <!-- CV: put Bernd-Salomon-CV.pdf next to index.html, then remove "hidden" -->
+            <a class="btn" href="Bernd-Salomon-CV.pdf" target="_blank" rel="noopener" aria-label="CV (PDF)" hidden>CV</a>
           </div>
         </div>
       </div>
       <footer class="footer">
         <span>© <span id="year">2026</span> Bernd Salomon</span>
-        <span class="footer__note">Every tree, sunbeam and dew drop here is grown live in your browser.</span>
+        <span class="signature">Built together with Claude</span>
       </footer>
     </section>
   </main>
