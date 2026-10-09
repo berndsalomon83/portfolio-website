@@ -1,0 +1,213 @@
+<!doctype html>
+<html lang="en" class="no-js">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Bernd Salomon — Portfolio</title>
+  <meta name="description" content="Portfolio of Bernd Salomon. A walk from the canopy of a Swedish forest down to its mossy floor, where something new is growing." />
+  <meta name="theme-color" content="#0b140e" />
+  <meta property="og:title" content="Bernd Salomon — Portfolio" />
+  <meta property="og:description" content="Let us build something new together." />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230b140e'/%3E%3Cpath d='M32 52V30' stroke='%23b9cc8e' stroke-width='3' stroke-linecap='round'/%3E%3Cpath d='M32 34c-9 0-14-6-14-14 9 0 14 6 14 14zM32 30c0-9 6-15 15-15 0 9-6 15-15 15z' fill='%23b9cc8e'/%3E%3C/svg%3E" />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..600;1,9..144,300..600&family=Inter:wght@300..600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/style.css" />
+
+  <script>document.documentElement.classList.replace('no-js', 'js');</script>
+  <script type="importmap">
+    { "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js" } }
+  </script>
+  <script type="module" src="js/main.js"></script>
+</head>
+
+<body>
+  <!-- The living forest. Everything in here is generated in real time. -->
+  <canvas id="forest" aria-hidden="true"></canvas>
+  <div class="scrim" aria-hidden="true"></div>
+
+  <!-- Loader -->
+  <div id="loader" class="loader" role="status" aria-live="polite">
+    <div class="loader__inner">
+      <svg class="loader__sprout" viewBox="0 0 120 150" aria-hidden="true">
+        <path class="loader__soil" d="M18 132 Q60 122 102 132" />
+        <path class="loader__stem" d="M60 130 C60 112 58 96 61 72" />
+        <path class="loader__leaf loader__leaf--l" d="M60 92 C46 92 34 84 31 68 C46 68 57 76 60 92 Z" />
+        <path class="loader__leaf loader__leaf--r" d="M61 74 C62 56 74 44 92 42 C91 60 79 72 61 74 Z" />
+      </svg>
+      <p class="loader__title">Skogen vaknar</p>
+      <p class="loader__sub"><span id="loader-label">The forest is waking up</span> · <span id="loader-pct">0</span>%</p>
+      <div class="loader__bar"><span id="loader-bar"></span></div>
+    </div>
+  </div>
+
+  <!-- Navigation -->
+  <header class="nav">
+    <a class="nav__brand" href="#hero" aria-label="Back to top">
+      <span class="nav__mark">BS</span>
+      <span class="nav__name">Bernd Salomon</span>
+    </a>
+    <nav class="nav__links" aria-label="Sections">
+      <a href="#about">About</a>
+      <a href="#work">Work</a>
+      <a href="#experience">Experience</a>
+      <button class="nav__sound" type="button" aria-pressed="false" aria-label="Forest sounds" title="Forest sounds (Ljud)">
+        <span class="nav__bars" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+        <span class="nav__sound-label">Ljud</span>
+      </button>
+      <a href="#contact" class="nav__cta">Contact</a>
+    </nav>
+  </header>
+
+  <!-- Height gauge: how far above the forest floor we are looking -->
+  <aside class="gauge" aria-hidden="true">
+    <span class="gauge__label gauge__label--top">Krona<small>Canopy</small></span>
+    <div class="gauge__track"><span class="gauge__fill"></span><span class="gauge__dot"><em class="gauge__value">24 m</em></span></div>
+    <span class="gauge__label gauge__label--bottom">Mark<small>Ground</small></span>
+  </aside>
+
+  <main>
+    <!-- 00 · HERO ─────────────────────────────────────────────── -->
+    <section id="hero" class="chapter chapter--hero" data-chapter>
+      <div class="hero">
+        <p class="eyebrow reveal">Portfolio <span class="dot"></span> Sverige</p>
+        <h1 class="hero__name reveal" style="--d: 1">
+          <span>Bernd</span>
+          <em>Salomon</em>
+        </h1>
+        <p class="hero__lead reveal" style="--d: 2">
+          Crafting thoughtful digital work — from the first spark of an idea up in the canopy
+          down to the roots that make it last.
+        </p>
+      </div>
+      <a class="scroll-cue reveal" style="--d: 4" href="#about">
+        <span class="scroll-cue__line"></span>
+        <span class="scroll-cue__text">Scroll to descend</span>
+      </a>
+    </section>
+
+    <!-- 01 · ABOUT ────────────────────────────────────────────── -->
+    <section id="about" class="chapter" data-chapter>
+      <div class="about">
+        <p class="kicker reveal"><span>01</span> Om mig — About</p>
+        <h2 class="display reveal" style="--d: 1">Rooted in curiosity. <em>Growing</em> with every project.</h2>
+        <div class="about__body glass reveal" style="--d: 2">
+          <!-- ✏️ Replace with your own story -->
+          <p>
+            Hej! I'm Bernd, based in Sweden. Use these lines to tell visitors who you are,
+            what you love working on and the kind of problems you enjoy solving.
+            Keep it personal — this is where people decide whether they'd like to work with you.
+          </p>
+          <dl class="facts">
+            <div><dt>Base</dt><dd>Sweden</dd></div>
+            <div><dt>Focus</dt><dd>Your speciality</dd></div>
+            <div><dt>Status</dt><dd><span class="pulse"></span>Open for new projects</dd></div>
+          </dl>
+        </div>
+      </div>
+    </section>
+
+    <!-- 02 · WORK ─────────────────────────────────────────────── -->
+    <section id="work" class="chapter chapter--work" data-chapter>
+      <div class="work">
+        <header class="work__head">
+          <p class="kicker reveal"><span>02</span> Arbeten — Selected work</p>
+          <h2 class="display reveal" style="--d: 1">Things that <em>took root</em>.</h2>
+        </header>
+        <!-- ✏️ Replace the four cards with your projects -->
+        <div class="cards">
+          <article class="card glass reveal" style="--d: 1">
+            <div class="card__meta"><span>01</span><span>2026</span></div>
+            <h3 class="card__title">Your flagship project</h3>
+            <p class="card__text">The challenge, your approach and what grew out of it — two or three sentences that make people curious.</p>
+            <ul class="tags"><li>Role</li><li>Stack</li><li>Outcome</li></ul>
+            <a class="card__link" href="#">View case study <span aria-hidden="true">→</span></a>
+          </article>
+          <article class="card glass reveal" style="--d: 2">
+            <div class="card__meta"><span>02</span><span>2025</span></div>
+            <h3 class="card__title">A product you shipped</h3>
+            <p class="card__text">Who it was for, what you built and the impact it had. Numbers and quotes make this shine.</p>
+            <ul class="tags"><li>Role</li><li>Stack</li></ul>
+            <a class="card__link" href="#">View case study <span aria-hidden="true">→</span></a>
+          </article>
+          <article class="card glass reveal" style="--d: 3">
+            <div class="card__meta"><span>03</span><span>2025</span></div>
+            <h3 class="card__title">An experiment you're proud of</h3>
+            <p class="card__text">Something you tried just because you were curious — and what you learned along the way.</p>
+            <ul class="tags"><li>Research</li><li>Prototype</li></ul>
+            <a class="card__link" href="#">Read more <span aria-hidden="true">→</span></a>
+          </article>
+          <article class="card glass reveal" style="--d: 4">
+            <div class="card__meta"><span>04</span><span>Ongoing</span></div>
+            <h3 class="card__title">Open source &amp; side projects</h3>
+            <p class="card__text">Tools, libraries or little things you maintain. Link your GitHub so people can dig deeper.</p>
+            <ul class="tags"><li>Open source</li><li>Community</li></ul>
+            <a class="card__link" href="#">See on GitHub <span aria-hidden="true">→</span></a>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- 03 · EXPERIENCE ───────────────────────────────────────── -->
+    <section id="experience" class="chapter" data-chapter>
+      <div class="exp">
+        <p class="kicker reveal"><span>03</span> Erfarenhet — Experience</p>
+        <h2 class="display reveal" style="--d: 1">Rings in the <em>trunk</em>.</h2>
+        <div class="exp__grid">
+          <!-- ✏️ Your journey, newest first -->
+          <ol class="timeline glass reveal" style="--d: 2">
+            <li>
+              <span class="timeline__when">2023 — now</span>
+              <h3>Your current role</h3>
+              <p>Company or studio · one line about what you do and what you're responsible for.</p>
+            </li>
+            <li>
+              <span class="timeline__when">2019 — 2023</span>
+              <h3>Previous role</h3>
+              <p>Company · a highlight you're proud of.</p>
+            </li>
+            <li>
+              <span class="timeline__when">2015 — 2019</span>
+              <h3>Where it all started</h3>
+              <p>Education, first job or the moment you got hooked.</p>
+            </li>
+          </ol>
+          <div class="toolkit glass reveal" style="--d: 3">
+            <h3>Toolkit</h3>
+            <!-- ✏️ Your skills -->
+            <ul class="chips">
+              <li>Core skill</li><li>Second strength</li><li>Favourite tool</li><li>Language</li>
+              <li>Framework</li><li>Method</li><li>Soft skill</li><li>Something unexpected</li>
+            </ul>
+            <p class="toolkit__note">Like the forest: a mix of fast-growing birches and slow, steady pines.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 04 · CONTACT — the forest floor ──────────────────────── -->
+    <section id="contact" class="chapter chapter--contact" data-chapter>
+      <div class="finale">
+        <p class="kicker kicker--center reveal"><span>04</span> Kontakt — Contact</p>
+        <h2 class="finale__line" aria-label="Let us build something new together.">
+          <span class="w">Let</span> <span class="w">us</span> <span class="w">build</span>
+          <span class="w">something</span> <em class="w">new</em> <span class="w">together.</span>
+        </h2>
+        <p class="finale__sv reveal" style="--d: 6">Låt oss bygga något nytt tillsammans.</p>
+        <p class="finale__sub reveal" style="--d: 7">Have an idea, a project or simply want to say hej? I'd love to hear from you.</p>
+        <!-- ✏️ Put your real addresses here -->
+        <div class="finale__actions reveal" style="--d: 8">
+          <a class="btn btn--primary" href="mailto:you@example.com">Say hej <span aria-hidden="true">→</span></a>
+          <a class="btn" href="https://github.com/" target="_blank" rel="noopener">GitHub</a>
+          <a class="btn" href="https://www.linkedin.com/" target="_blank" rel="noopener">LinkedIn</a>
+        </div>
+      </div>
+      <footer class="footer">
+        <span>© <span id="year">2026</span> Bernd Salomon</span>
+        <span class="footer__note">Every tree, sunbeam and dew drop here is grown live in your browser.</span>
+      </footer>
+    </section>
+  </main>
+</body>
+</html>
