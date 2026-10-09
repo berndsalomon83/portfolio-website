@@ -12,10 +12,16 @@ export function initUI() {
   const year = document.getElementById('year');
   if (year) year.textContent = String(new Date().getFullYear());
 
-  // e-mail links are assembled here so the address isn't sitting in the HTML for scrapers
+  // e-mail and phone links are assembled here so they aren't sitting in the HTML for scrapers
   document.querySelectorAll('[data-mail]').forEach((a) => {
     const [user, domain] = a.dataset.mail.split('|');
     a.href = `mailto:${user}@${domain}`;
+    if (a.hasAttribute('data-show')) a.textContent = `${user}@${domain}`;
+  });
+  document.querySelectorAll('[data-tel]').forEach((a) => {
+    const number = a.dataset.tel.split('|').join(' ');
+    a.href = `tel:${number.replace(/[^0-9+]/g, '')}`;
+    a.textContent = number;
   });
 
   // stagger the words of the final sentence

@@ -255,7 +255,6 @@ main { position: relative; z-index: 2; }
 }
 .is-ready .gauge { opacity: 1; }
 .gauge__label { display: flex; flex-direction: column; align-items: center; line-height: 1.3; }
-.gauge__label small { font-size: 0.85em; letter-spacing: 0.1em; opacity: 0.6; text-transform: none; }
 .gauge__track { position: relative; width: 1px; height: 34vh; background: var(--line); }
 .gauge__fill {
   position: absolute;
@@ -584,16 +583,27 @@ main { position: relative; z-index: 2; }
   transition-delay: calc(var(--i, 0) * 140ms + 200ms);
 }
 .is-in .finale__line .w { opacity: 1; transform: none; filter: none; }
-.finale__sv {
-  margin: 26px 0 6px;
-  font-family: var(--serif);
-  font-style: italic;
-  font-size: clamp(1.05rem, 1.5vw, 1.3rem);
-  color: var(--moss);
-  text-shadow: 0 1px 20px rgba(0, 0, 0, 0.5);
-}
-.finale__sub { margin: 0 auto; max-width: 44ch; color: var(--ink-soft); text-shadow: 0 1px 20px rgba(0, 0, 0, 0.6); }
+.finale__sub { margin: 28px auto 0; max-width: 44ch; color: var(--ink-soft); text-shadow: 0 1px 20px rgba(0, 0, 0, 0.6); }
 .finale__actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; margin-top: 32px; }
+.contact-list {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 12px 30px;
+  margin: 28px 0 0;
+  text-shadow: 0 1px 16px rgba(0, 0, 0, 0.7);
+}
+.contact-list div { display: flex; flex-direction: column; gap: 3px; text-align: left; }
+.contact-list dt { font-size: 0.66rem; letter-spacing: 0.18em; text-transform: uppercase; color: var(--ink-mute); }
+.contact-list dd { margin: 0; font-size: 0.95rem; }
+.contact-list a {
+  color: var(--ink);
+  text-decoration: none;
+  border-bottom: 1px solid var(--line-strong);
+  font-variant-numeric: tabular-nums;
+  transition: color 0.3s, border-color 0.3s;
+}
+.contact-list a:hover { color: var(--gold); border-color: var(--gold); }
 .btn {
   display: inline-flex;
   align-items: center;
@@ -621,8 +631,9 @@ main { position: relative; z-index: 2; }
   .finale { margin: 0; max-width: min(47vw, 720px); text-align: left; padding-top: 6vh; }
   .kicker--center { text-align: left; }
   .finale__line { margin: 0; max-width: 11ch; font-size: clamp(2.8rem, 5.6vw, 6.2rem); }
-  .finale__sub { margin: 0; max-width: 40ch; }
+  .finale__sub { margin: 28px 0 0; max-width: 40ch; }
   .finale__actions { justify-content: flex-start; }
+  .contact-list { justify-content: flex-start; }
   .chapter--contact .footer { position: absolute; left: var(--gutter); right: calc(var(--gutter) + 40px); bottom: 0; width: auto; }
 }
 
@@ -683,8 +694,9 @@ a:focus-visible { outline: 2px solid var(--gold); outline-offset: 4px; border-ra
   .hero__name em { padding-left: 0.35em; }
   .chapter--contact { padding-top: 12vh; }
   .finale__line { font-size: clamp(2.1rem, 9.5vw, 3rem); }
-  .finale__sv { margin-top: 16px; font-size: 1rem; }
-  .finale__sub { font-size: 0.92rem; }
+  .finale__sub { margin-top: 18px; font-size: 0.92rem; }
+  .contact-list { gap: 10px 20px; margin-top: 18px; }
+  .contact-list dd { font-size: 0.85rem; }
   .finale__actions { gap: 8px; margin-top: 20px; }
   .finale__actions .btn { padding: 10px 16px; font-size: 0.86rem; }
   .chapter--contact .footer { position: absolute; left: var(--gutter); right: var(--gutter); bottom: 0; width: auto; padding-bottom: 14px; font-size: 0.7rem; }

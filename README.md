@@ -34,7 +34,7 @@ All text lives in **`index.html`**:
 | 03 · Experience | Career timeline and the grouped toolkit chips |
 | 04 · Contact | E-mail and GitHub buttons |
 
-The e-mail address is stored as `data-mail="user|domain"` on the "Say hej" button and assembled by `js/ui.js`, so simple scrapers can't harvest it from the HTML. The page `<title>`, meta description and Open Graph tags are at the top of `index.html`.
+E-mail addresses (`data-mail="user|domain"`) and phone numbers (`data-tel="prefix|rest"`) in the contact chapter are assembled by `js/ui.js`, so simple scrapers can't harvest them from the HTML. The page `<title>`, meta description and Open Graph tags are at the top of `index.html`.
 
 ## Tuning the forest
 
@@ -49,7 +49,7 @@ The e-mail address is stored as `data-mail="user|domain"` on the "Say hej" butto
 | `js/world/props.js` | Granite boulders, fallen logs, stump, twigs, pine cones, chanterelles and fly agarics |
 | `js/world/details.js` | Dew drops, the spider web, sunlit dust and the misty forest backdrop |
 | `js/post/pipeline.js` | HDR post-processing: volumetric light, crepuscular rays, bloom, depth of field, ACES tone mapping and grading |
-| `js/audio.js` | Optional synthesised soundscape: wind and Swedish great tits ("Ljud" button, off by default) |
+| `js/audio.js` | Optional synthesised soundscape: wind and Swedish great tits ("Sound" button, off by default) |
 
 ## How it works
 

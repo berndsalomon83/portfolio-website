@@ -36,8 +36,8 @@
         <path class="loader__leaf loader__leaf--l" d="M60 92 C46 92 34 84 31 68 C46 68 57 76 60 92 Z" />
         <path class="loader__leaf loader__leaf--r" d="M61 74 C62 56 74 44 92 42 C91 60 79 72 61 74 Z" />
       </svg>
-      <p class="loader__title">Skogen vaknar</p>
-      <p class="loader__sub"><span id="loader-label">The forest is waking up</span> · <span id="loader-pct">0</span>%</p>
+      <p class="loader__title">The forest is waking up</p>
+      <p class="loader__sub"><span id="loader-label">Getting ready</span> · <span id="loader-pct">0</span>%</p>
       <div class="loader__bar"><span id="loader-bar"></span></div>
     </div>
   </div>
@@ -52,9 +52,9 @@
       <a href="#about">About</a>
       <a href="#work">Work</a>
       <a href="#experience">Experience</a>
-      <button class="nav__sound" type="button" aria-pressed="false" aria-label="Forest sounds" title="Forest sounds (Ljud)">
+      <button class="nav__sound" type="button" aria-pressed="false" aria-label="Forest sounds" title="Forest sounds">
         <span class="nav__bars" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
-        <span class="nav__sound-label">Ljud</span>
+        <span class="nav__sound-label">Sound</span>
       </button>
       <a href="#contact" class="nav__cta">Contact</a>
     </nav>
@@ -62,16 +62,16 @@
 
   <!-- Height gauge: how far above the forest floor we are looking -->
   <aside class="gauge" aria-hidden="true">
-    <span class="gauge__label gauge__label--top">Krona<small>Canopy</small></span>
+    <span class="gauge__label gauge__label--top">Canopy</span>
     <div class="gauge__track"><span class="gauge__fill"></span><span class="gauge__dot"><em class="gauge__value">24 m</em></span></div>
-    <span class="gauge__label gauge__label--bottom">Mark<small>Ground</small></span>
+    <span class="gauge__label gauge__label--bottom">Ground</span>
   </aside>
 
   <main>
     <!-- 00 · HERO ─────────────────────────────────────────────── -->
     <section id="hero" class="chapter chapter--hero" data-chapter>
       <div class="hero">
-        <p class="eyebrow reveal">Senior Developer &amp; Solution Architect <span class="dot"></span> Local AI <span class="dot"></span> Sverige</p>
+        <p class="eyebrow reveal">Senior Developer &amp; Solution Architect <span class="dot"></span> Local AI <span class="dot"></span> Sweden</p>
         <h1 class="hero__name reveal" style="--d: 1">
           <span>Bernd</span>
           <em>Salomon</em>
@@ -90,7 +90,7 @@
     <!-- 01 · ABOUT ────────────────────────────────────────────── -->
     <section id="about" class="chapter" data-chapter>
       <div class="about">
-        <p class="kicker reveal"><span>01</span> Om mig — About</p>
+        <p class="kicker reveal"><span>01</span> About</p>
         <h2 class="display display--wide reveal" style="--d: 1">AI is a lever. It pays off when you know what lies <em>beneath</em>.</h2>
         <div class="about__grid">
           <div class="about__body glass reveal" style="--d: 2">
@@ -107,7 +107,7 @@
               that doesn't depend on anyone's cloud API.
             </p>
             <dl class="facts">
-              <div><dt>Base</dt><dd>Sweden</dd></div>
+              <div><dt>Home</dt><dd>Säffle, Sweden</dd></div>
               <div><dt>Focus</dt><dd>Local &amp; sovereign AI · data platforms</dd></div>
               <div><dt>Languages</dt><dd>German · English · Swedish (learning)</dd></div>
               <div><dt>Status</dt><dd><span class="pulse"></span>Available now</dd></div>
@@ -138,7 +138,7 @@
     <section id="work" class="chapter chapter--work" data-chapter>
       <div class="work">
         <header class="work__head">
-          <p class="kicker reveal"><span>02</span> Arbeten — Selected work</p>
+          <p class="kicker reveal"><span>02</span> Selected work</p>
           <h2 class="display reveal" style="--d: 1">Things that <em>took root</em>.</h2>
         </header>
         <div class="cards">
@@ -177,7 +177,7 @@
     <!-- 03 · EXPERIENCE ───────────────────────────────────────── -->
     <section id="experience" class="chapter" data-chapter>
       <div class="exp">
-        <p class="kicker reveal"><span>03</span> Erfarenhet — Experience</p>
+        <p class="kicker reveal"><span>03</span> Experience</p>
         <h2 class="display reveal" style="--d: 1">Rings in the <em>trunk</em>.</h2>
         <div class="exp__grid">
           <ol class="timeline glass reveal" style="--d: 2">
@@ -230,18 +230,23 @@
     <!-- 04 · CONTACT — the forest floor ──────────────────────── -->
     <section id="contact" class="chapter chapter--contact" data-chapter>
       <div class="finale">
-        <p class="kicker kicker--center reveal"><span>04</span> Kontakt — Contact</p>
+        <p class="kicker kicker--center reveal"><span>04</span> Contact</p>
         <h2 class="finale__line" aria-label="Let us build something new together.">
           <span class="w">Let</span> <span class="w">us</span> <span class="w">build</span>
           <span class="w">something</span> <em class="w">new</em> <span class="w">together.</span>
         </h2>
-        <p class="finale__sv reveal" style="--d: 6">Låt oss bygga något nytt tillsammans.</p>
         <p class="finale__sub reveal" style="--d: 7">Want to use AI properly, or run your own models instead of renting someone else's? Or simply say hej? I'd love to hear from you.</p>
         <div class="finale__actions reveal" style="--d: 8">
-          <!-- the address is assembled by js/ui.js so simple scrapers can't harvest it -->
-          <a class="btn btn--primary" href="#contact" data-mail="bernd.salomon|gmx.de">Say hej <span aria-hidden="true">→</span></a>
+          <!-- addresses and numbers are assembled by js/ui.js so simple scrapers can't harvest them -->
+          <a class="btn btn--primary" href="#contact" data-mail="bernd.salomon.83|gmail.com">Say hej <span aria-hidden="true">→</span></a>
           <a class="btn" href="https://github.com/berndsalomon83" target="_blank" rel="noopener">GitHub</a>
         </div>
+        <dl class="contact-list reveal" style="--d: 9">
+          <div><dt>E-mail</dt><dd><a data-mail="bernd.salomon.83|gmail.com" data-show></a></dd></div>
+          <div><dt>Phone · Germany</dt><dd><a data-tel="+49 176|2099 1360"></a></dd></div>
+          <div><dt>Phone · Sweden</dt><dd><a data-tel="+46 70|206 39 41"></a></dd></div>
+        </dl>
+        <noscript><p class="finale__sub">bernd.salomon.83 [at] gmail.com</p></noscript>
       </div>
       <footer class="footer">
         <span>© <span id="year">2026</span> Bernd Salomon</span>
