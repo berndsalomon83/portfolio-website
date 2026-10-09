@@ -44,10 +44,6 @@
 
   <!-- Navigation -->
   <header class="nav">
-    <a class="nav__brand" href="#hero" aria-label="Back to top">
-      <span class="nav__mark">BS</span>
-      <span class="nav__name">Bernd Salomon</span>
-    </a>
     <nav class="nav__links" aria-label="Sections">
       <a href="#about">About</a>
       <a href="#work">Work</a>
@@ -235,18 +231,20 @@
           <span class="w">Let</span> <span class="w">us</span> <span class="w">build</span>
           <span class="w">something</span> <em class="w">new</em> <span class="w">together.</span>
         </h2>
-        <p class="finale__sub reveal" style="--d: 7">Want to use AI properly, or run your own models instead of renting someone else's? Or simply say hej? I'd love to hear from you.</p>
-        <div class="finale__actions reveal" style="--d: 8">
+        <div class="finale__card glass reveal" style="--d: 7">
+          <p class="finale__sub">Want to use AI properly, or run your own models instead of renting someone else's? Or simply say hej? I'd love to hear from you.</p>
           <!-- addresses and numbers are assembled by js/ui.js so simple scrapers can't harvest them -->
-          <a class="btn btn--primary" href="#contact" data-mail="bernd.salomon.83|gmail.com">Say hej <span aria-hidden="true">→</span></a>
-          <a class="btn" href="https://github.com/berndsalomon83" target="_blank" rel="noopener">GitHub</a>
+          <dl class="facts contact-list">
+            <div><dt>E-mail</dt><dd><a data-mail="bernd.salomon.83|gmail.com" data-show></a></dd></div>
+            <div><dt>Phone · Germany</dt><dd><a data-tel="+49 176|2099 1360"></a></dd></div>
+            <div><dt>Phone · Sweden</dt><dd><a data-tel="+46 70|206 39 41"></a></dd></div>
+          </dl>
+          <noscript><p class="finale__sub">bernd.salomon.83 [at] gmail.com</p></noscript>
+          <div class="finale__actions">
+            <a class="btn btn--primary" href="#contact" data-mail="bernd.salomon.83|gmail.com">Say hej <span aria-hidden="true">→</span></a>
+            <a class="btn" href="https://github.com/berndsalomon83" target="_blank" rel="noopener">GitHub</a>
+          </div>
         </div>
-        <dl class="contact-list reveal" style="--d: 9">
-          <div><dt>E-mail</dt><dd><a data-mail="bernd.salomon.83|gmail.com" data-show></a></dd></div>
-          <div><dt>Phone · Germany</dt><dd><a data-tel="+49 176|2099 1360"></a></dd></div>
-          <div><dt>Phone · Sweden</dt><dd><a data-tel="+46 70|206 39 41"></a></dd></div>
-        </dl>
-        <noscript><p class="finale__sub">bernd.salomon.83 [at] gmail.com</p></noscript>
       </div>
       <footer class="footer">
         <span>© <span id="year">2026</span> Bernd Salomon</span>

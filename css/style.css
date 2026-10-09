@@ -14,7 +14,6 @@
   --lingon: #d0503f;
   --bg: #0b140e;
   --glass: rgba(12, 20, 14, 0.42);
-  --glass-hi: rgba(255, 248, 230, 0.06);
   --line: rgba(245, 240, 230, 0.14);
   --line-strong: rgba(245, 240, 230, 0.28);
 
@@ -141,7 +140,7 @@ main { position: relative; z-index: 2; }
   z-index: 20;
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-end;
   gap: 16px;
   padding: clamp(14px, 2.4vw, 28px) var(--gutter);
   pointer-events: none;
@@ -158,23 +157,6 @@ main { position: relative; z-index: 2; }
   transition: opacity 0.6s var(--ease);
 }
 .is-scrolled .nav::before { opacity: 1; }
-.nav__brand { display: inline-flex; align-items: center; gap: 12px; text-decoration: none; }
-.nav__mark {
-  display: grid;
-  place-items: center;
-  width: 38px;
-  height: 38px;
-  border: 1px solid var(--line-strong);
-  border-radius: 50%;
-  font-family: var(--serif);
-  font-style: italic;
-  font-size: 0.95rem;
-  letter-spacing: 0.02em;
-  background: rgba(10, 18, 12, 0.25);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-}
-.nav__name { font-size: 0.92rem; letter-spacing: 0.02em; color: var(--ink-soft); }
 .nav__links { display: flex; align-items: center; gap: clamp(10px, 2vw, 30px); }
 .nav__links a {
   position: relative;
@@ -202,13 +184,9 @@ main { position: relative; z-index: 2; }
 .nav__links a.is-active::after { transform: scaleX(1); }
 .nav__cta {
   padding: 8px 16px;
-  border: 1px solid var(--line-strong);
   border-radius: 999px;
-  background: rgba(10, 18, 12, 0.3);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
 }
-.nav__cta:hover { border-color: var(--gold); color: var(--gold) !important; }
+.nav__cta:hover { --rim: 243, 203, 125; color: var(--gold) !important; }
 .nav__sound {
   display: inline-flex;
   align-items: center;
@@ -337,14 +315,80 @@ main { position: relative; z-index: 2; }
   color: var(--gold);
 }
 
+/* "Liquid glass": the forest stays visible through a light tint, the blurred backdrop is dimmed a
+   little for legible text, a soft sheen sits on the top edge and a fine ring catches the light along
+   the curved rim. js/liquid-glass.js adds gentle lens refraction at the edges in Chromium browsers. */
+:root {
+  --rim: 255, 255, 255;
+  --glass-backdrop: blur(22px) saturate(170%) brightness(0.78);
+  --pill-backdrop: blur(14px) saturate(170%) brightness(0.86);
+}
 .glass {
   position: relative;
-  background: linear-gradient(160deg, rgba(20, 32, 22, 0.55), rgba(8, 14, 10, 0.38));
-  border: 1px solid var(--line);
+  background:
+    linear-gradient(150deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.015) 40%, rgba(255, 255, 255, 0.04) 100%),
+    rgba(9, 16, 11, 0.3);
   border-radius: 22px;
-  box-shadow: inset 0 1px 0 var(--glass-hi), 0 30px 60px -30px rgba(0, 0, 0, 0.55);
-  backdrop-filter: blur(16px) saturate(125%);
-  -webkit-backdrop-filter: blur(16px) saturate(125%);
+  box-shadow:
+    inset 0 1px 1px rgba(255, 255, 255, 0.22),
+    inset 0 -1px 1px rgba(255, 255, 255, 0.05),
+    inset 0 0 24px rgba(255, 255, 255, 0.045),
+    0 28px 64px -30px rgba(0, 0, 0, 0.55);
+  backdrop-filter: var(--glass-backdrop);
+  -webkit-backdrop-filter: var(--glass-backdrop);
+}
+.glass::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background: radial-gradient(130% 70% at 18% -10%, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0) 55%);
+}
+.glass > * { position: relative; }
+
+/* The same material for the small pills: logo mark, nav button, secondary buttons. */
+.nav__cta,
+.btn {
+  position: relative;
+  background:
+    linear-gradient(160deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.03) 55%, rgba(255, 255, 255, 0.06)),
+    rgba(9, 16, 11, 0.24);
+  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.26), inset 0 -1px 1px rgba(255, 255, 255, 0.05), 0 10px 26px -14px rgba(0, 0, 0, 0.5);
+  backdrop-filter: var(--pill-backdrop);
+  -webkit-backdrop-filter: var(--pill-backdrop);
+}
+
+/* Pills on a glass card already look through dimmed glass, so keep them light (no double darkening). */
+.glass .btn:not(.btn--primary) {
+  --pill-backdrop: blur(10px) saturate(140%) brightness(1.15);
+  background:
+    linear-gradient(160deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0.05) 55%, rgba(255, 255, 255, 0.09)),
+    rgba(255, 255, 255, 0.03);
+}
+
+/* Light-catching rim: brightest at the top-left and bottom-right, fading along the sides. */
+.glass::after,
+.nav__cta::after,
+.btn::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  padding: 1px;
+  border-radius: inherit;
+  pointer-events: none;
+  background: linear-gradient(
+    140deg,
+    rgba(var(--rim), 0.55) 0%,
+    rgba(var(--rim), 0.16) 22%,
+    rgba(var(--rim), 0.04) 50%,
+    rgba(var(--rim), 0.12) 78%,
+    rgba(var(--rim), 0.38) 100%
+  );
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  mask-composite: exclude;
 }
 
 /* Hero */
@@ -472,7 +516,14 @@ main { position: relative; z-index: 2; }
   transition: transform 0.6s var(--ease), border-color 0.6s var(--ease), box-shadow 0.6s var(--ease);
 }
 .card:nth-child(even) { transform: translateY(48px); }
-.card:hover { border-color: rgba(243, 203, 125, 0.45); box-shadow: inset 0 1px 0 var(--glass-hi), 0 30px 80px -30px rgba(243, 203, 125, 0.25); }
+.card:hover {
+  --rim: 243, 203, 125;
+  box-shadow:
+    inset 0 1px 1px rgba(255, 255, 255, 0.26),
+    inset 0 -1px 1px rgba(255, 255, 255, 0.05),
+    inset 0 0 24px rgba(255, 255, 255, 0.06),
+    0 30px 80px -30px rgba(243, 203, 125, 0.28);
+}
 .card__meta {
   display: flex;
   justify-content: space-between;
@@ -558,7 +609,7 @@ main { position: relative; z-index: 2; }
 .chapter--contact {
   flex-direction: column;
   justify-content: flex-start;
-  padding-top: 15vh;
+  padding-top: 11vh;
   padding-bottom: 0;
   padding-right: var(--gutter);
 }
@@ -568,7 +619,7 @@ main { position: relative; z-index: 2; }
   max-width: 14ch;
   font-family: var(--serif);
   font-weight: 300;
-  font-size: clamp(2.6rem, 7.2vw, 6.6rem);
+  font-size: clamp(2.4rem, 6vw, 5.6rem);
   line-height: 1.0;
   letter-spacing: -0.03em;
   font-variation-settings: 'opsz' 144;
@@ -583,19 +634,18 @@ main { position: relative; z-index: 2; }
   transition-delay: calc(var(--i, 0) * 140ms + 200ms);
 }
 .is-in .finale__line .w { opacity: 1; transform: none; filter: none; }
-.finale__sub { margin: 28px auto 0; max-width: 44ch; color: var(--ink-soft); text-shadow: 0 1px 20px rgba(0, 0, 0, 0.6); }
-.finale__actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; margin-top: 32px; }
-.contact-list {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 12px 30px;
-  margin: 28px 0 0;
-  text-shadow: 0 1px 16px rgba(0, 0, 0, 0.7);
+.finale__card {
+  margin: 20px auto 0;
+  max-width: 460px;
+  padding: 14px 20px 16px;
+  border-radius: 18px;
+  text-align: left;
 }
-.contact-list div { display: flex; flex-direction: column; gap: 3px; text-align: left; }
-.contact-list dt { font-size: 0.66rem; letter-spacing: 0.18em; text-transform: uppercase; color: var(--ink-mute); }
-.contact-list dd { margin: 0; font-size: 0.95rem; }
+.finale__sub { margin: 0 0 6px; font-size: 0.92rem; line-height: 1.5; color: var(--ink-soft); }
+.contact-list div { padding: 6px 0; font-size: 0.84rem; }
+.contact-list dd { font-size: 0.9rem; }
+.finale__actions { display: flex; flex-wrap: wrap; justify-content: flex-start; gap: 8px; margin-top: 12px; }
+.finale__card .btn { padding: 8px 16px; font-size: 0.86rem; }
 .contact-list a {
   color: var(--ink);
   text-decoration: none;
@@ -609,32 +659,39 @@ main { position: relative; z-index: 2; }
   align-items: center;
   gap: 10px;
   padding: 13px 24px;
-  border: 1px solid var(--line-strong);
   border-radius: 999px;
   text-decoration: none;
   font-size: 0.92rem;
   letter-spacing: 0.03em;
-  background: rgba(10, 18, 12, 0.35);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  transition: background 0.4s var(--ease), border-color 0.4s var(--ease), color 0.4s var(--ease), transform 0.4s var(--ease);
+  transition: background 0.4s var(--ease), color 0.4s var(--ease), transform 0.4s var(--ease);
 }
-.btn:hover { border-color: var(--gold); color: var(--gold); transform: translateY(-2px); }
-.btn--primary { background: var(--gold); border-color: var(--gold); color: #1a1408; font-weight: 500; }
-.btn--primary:hover { background: #ffe0a3; color: #1a1408; }
+.btn:hover { --rim: 243, 203, 125; color: var(--gold); transform: translateY(-2px); }
+.btn--primary {
+  background: linear-gradient(170deg, rgba(255, 255, 255, 0.35), rgba(255, 255, 255, 0) 55%), var(--gold);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6), inset 0 -2px 6px rgba(150, 100, 20, 0.25), 0 12px 30px -14px rgba(243, 203, 125, 0.7);
+  color: #1a1408;
+  font-weight: 500;
+}
+.btn--primary:hover { --rim: 255, 255, 255; background: linear-gradient(170deg, rgba(255, 255, 255, 0.4), rgba(255, 255, 255, 0) 55%), #ffe0a3; color: #1a1408; }
 .btn span { transition: transform 0.4s var(--ease); }
 .btn:hover span { transform: translateX(4px); }
 
 /* Wide screens: the closing words sit to the left, the seedling grows on the right. */
 @media (min-width: 900px) and (min-aspect-ratio: 23/20) {
-  .chapter--contact { padding-top: 0; justify-content: center; align-items: flex-start; }
-  .finale { margin: 0; max-width: min(47vw, 720px); text-align: left; padding-top: 6vh; }
+  .chapter--contact { padding-top: 96px; padding-bottom: 72px; justify-content: center; align-items: flex-start; }
+  .finale { margin: 0; max-width: min(47vw, 720px); text-align: left; }
   .kicker--center { text-align: left; }
   .finale__line { margin: 0; max-width: 11ch; font-size: clamp(2.8rem, 5.6vw, 6.2rem); }
-  .finale__sub { margin: 28px 0 0; max-width: 40ch; }
-  .finale__actions { justify-content: flex-start; }
-  .contact-list { justify-content: flex-start; }
+  .finale__card { margin: 22px 0 0; }
   .chapter--contact .footer { position: absolute; left: var(--gutter); right: calc(var(--gutter) + 40px); bottom: 0; width: auto; }
+}
+
+/* Wide but short screens (laptops at 768–860 px height): tighten the finale so it fits. */
+@media (min-width: 900px) and (min-aspect-ratio: 23/20) and (max-height: 860px) {
+  .chapter--contact { padding-top: 84px; padding-bottom: 64px; }
+  .finale .kicker { margin-bottom: 14px; }
+  .finale__line { font-size: clamp(2.5rem, 4.4vw, 4.4rem); }
+  .finale__card { margin-top: 16px; }
 }
 
 .footer {
@@ -669,6 +726,35 @@ main { position: relative; z-index: 2; }
 .clean .gauge,
 .clean .scrim { display: none !important; }
 
+/* "Address copied" note after clicking an e-mail link */
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: 28px;
+  z-index: 60;
+  max-width: calc(100vw - 32px);
+  padding: 11px 20px 11px 16px;
+  border-radius: 999px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.86rem;
+  letter-spacing: 0.02em;
+  color: var(--ink);
+  background:
+    linear-gradient(160deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.04) 55%, rgba(255, 255, 255, 0.08)),
+    rgba(9, 16, 11, 0.55);
+  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.28), inset 0 0 0 1px rgba(255, 255, 255, 0.12), 0 14px 34px -14px rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(14px) saturate(160%);
+  -webkit-backdrop-filter: blur(14px) saturate(160%);
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(-50%, 14px);
+  transition: opacity 0.4s var(--ease), transform 0.4s var(--ease);
+}
+.toast::before { content: '✓'; margin-right: 10px; color: var(--gold); }
+.toast.is-on { opacity: 1; transform: translate(-50%, 0); }
+
 /* Focus states */
 a:focus-visible { outline: 2px solid var(--gold); outline-offset: 4px; border-radius: 6px; }
 
@@ -680,7 +766,6 @@ a:focus-visible { outline: 2px solid var(--gold); outline-offset: 4px; border-ra
 }
 
 @media (max-width: 760px) {
-  .nav__name { display: none; }
   .nav__sound-label { display: none; }
   .nav__links { gap: 14px; }
   .nav__links a:not(.nav__cta) { font-size: 0.82rem; }
@@ -694,11 +779,9 @@ a:focus-visible { outline: 2px solid var(--gold); outline-offset: 4px; border-ra
   .hero__name em { padding-left: 0.35em; }
   .chapter--contact { padding-top: 12vh; }
   .finale__line { font-size: clamp(2.1rem, 9.5vw, 3rem); }
-  .finale__sub { margin-top: 18px; font-size: 0.92rem; }
-  .contact-list { gap: 10px 20px; margin-top: 18px; }
-  .contact-list dd { font-size: 0.85rem; }
-  .finale__actions { gap: 8px; margin-top: 20px; }
-  .finale__actions .btn { padding: 10px 16px; font-size: 0.86rem; }
+  .finale__card { margin-top: 16px; padding: 12px 16px 14px; }
+  .finale__sub { font-size: 0.86rem; }
+  .contact-list dd { font-size: 0.84rem; }
   .chapter--contact .footer { position: absolute; left: var(--gutter); right: var(--gutter); bottom: 0; width: auto; padding-bottom: 14px; font-size: 0.7rem; }
   .footer__note { display: none; }
   .scrim {
@@ -708,7 +791,6 @@ a:focus-visible { outline: 2px solid var(--gold); outline-offset: 4px; border-ra
 }
 
 @media (max-width: 480px) {
-  .nav__links a[href='#experience'] { display: none; }
   .footer { justify-content: center; text-align: center; }
 }
 

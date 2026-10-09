@@ -29,6 +29,7 @@ function leafGeometry() {
 
 export function buildSapling({ foliage, quality }) {
   const rng = new RNG(31);
+  const dewRng = new RNG(7);
   const group = new THREE.Group();
   group.name = 'sapling';
   const gy = heightAt(SAPLING.x, SAPLING.y);
@@ -112,16 +113,21 @@ export function buildSapling({ foliage, quality }) {
       mesh.receiveShadow = true;
       mesh.customDepthMaterial = leafDepth;
       pivot.add(mesh);
-      // dew: a few beads on the blade and one pendant drop at the tip
+      // dew, unevenly: most leaves stay dry, some hold a bead or two, the odd tip a hanging drop.
+      // (`rng` is still consumed as before so the seedling keeps its exact shape; `dewRng` decides.)
       const drops = [];
       const nd = rng.int(2, 4);
+      const wet = dewRng.next();
+      const beads = wet < 0.45 ? 0 : wet < 0.8 ? 1 : 2;
+      const hangs = (k === N - 1 && l === 0) || dewRng.chance(0.15);
       for (let d = 0; d < nd + 1; d++) {
         const tip = d === nd;
-        const drop = new THREE.Mesh(dropGeo, dewMat);
         const ry = tip ? 0.99 : rng.float(0.3, 0.8);
         const rx = tip ? 0 : rng.float(-0.18, 0.18);
+        const rad = (tip ? 0.0042 : rng.float(0.0018, 0.0032) * dewRng.float(0.55, 1.1)) / size;
+        if (tip ? !hangs : d >= beads) continue;
+        const drop = new THREE.Mesh(dropGeo, dewMat);
         drop.position.set(rx, ry, Math.abs(rx) * 0.18 - rx * rx * 0.25 - ry * ry * 0.12 + 0.012 + (tip ? -0.03 : 0));
-        const rad = (tip ? 0.0042 : rng.float(0.0018, 0.0032)) / size;
         drop.scale.set(rad, rad * (tip ? 1.25 : 0.82), rad);
         mesh.add(drop);
         drops.push(drop);

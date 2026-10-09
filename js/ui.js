@@ -1,5 +1,46 @@
 // DOM side of the experience: loader, reveal-on-scroll, active nav link, height gauge, sound toggle.
 import { ForestAudio } from './audio.js';
+import { initLiquidGlass } from './liquid-glass.js';
+
+const MAIL_SUBJECT = "Hej Bernd – let's talk";
+
+async function copyText(text) {
+  try {
+    await navigator.clipboard.writeText(text);
+    return true;
+  } catch {
+    // older browsers / non-secure contexts
+    try {
+      const t = document.createElement('textarea');
+      t.value = text;
+      t.setAttribute('readonly', '');
+      t.style.cssText = 'position:fixed;top:0;left:0;opacity:0';
+      document.body.appendChild(t);
+      t.select();
+      const ok = document.execCommand('copy');
+      t.remove();
+      return ok;
+    } catch {
+      return false;
+    }
+  }
+}
+
+let toastEl = null;
+let toastTimer = 0;
+function toast(message) {
+  if (!toastEl) {
+    toastEl = document.createElement('div');
+    toastEl.className = 'toast';
+    toastEl.setAttribute('role', 'status');
+    toastEl.setAttribute('aria-live', 'polite');
+    document.body.appendChild(toastEl);
+  }
+  toastEl.textContent = message;
+  toastEl.classList.add('is-on');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => toastEl.classList.remove('is-on'), 3400);
+}
 
 export function initUI() {
   const root = document.documentElement;
@@ -12,11 +53,16 @@ export function initUI() {
   const year = document.getElementById('year');
   if (year) year.textContent = String(new Date().getFullYear());
 
-  // e-mail and phone links are assembled here so they aren't sitting in the HTML for scrapers
+  // e-mail and phone links are assembled here so they aren't sitting in the HTML for scrapers.
+  // A click opens the mail app with a subject and also copies the address — webmail users can paste it.
   document.querySelectorAll('[data-mail]').forEach((a) => {
     const [user, domain] = a.dataset.mail.split('|');
-    a.href = `mailto:${user}@${domain}`;
-    if (a.hasAttribute('data-show')) a.textContent = `${user}@${domain}`;
+    const address = `${user}@${domain}`;
+    a.href = `mailto:${address}?subject=${encodeURIComponent(MAIL_SUBJECT)}`;
+    if (a.hasAttribute('data-show')) a.textContent = address;
+    a.addEventListener('click', async () => {
+      if (await copyText(address)) toast(`Address copied: ${address}`);
+    });
   });
   document.querySelectorAll('[data-tel]').forEach((a) => {
     const number = a.dataset.tel.split('|').join(' ');
@@ -84,6 +130,8 @@ export function initUI() {
     done() {
       loader?.classList.add('is-done');
       root.classList.add('is-ready');
+      // lens-like glass edges, built once the forest is up so they don't compete with loading
+      setTimeout(() => initLiquidGlass(), 400);
       setTimeout(() => loader?.remove(), 1600);
     },
     gauge(story) {
