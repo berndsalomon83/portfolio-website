@@ -22,19 +22,19 @@ There is no build step. Upload the folder as-is to any static host: GitHub Pages
 
 To host three.js yourself, download `three.module.js` (v0.169.0) and point the import map at your copy.
 
-## Make it yours ✏️
+## Editing the content
 
-All text lives in **`index.html`**. Places to edit are marked with `✏️`:
+All text lives in **`index.html`**:
 
-| Section | What to change |
+| Section | What's there |
 | --- | --- |
-| Hero | Tagline under your name |
-| 01 · About | Your story and the three facts (base, focus, status) |
-| 02 · Work | The four project cards: title, text, tags, links |
-| 03 · Experience | Timeline entries and toolkit chips |
-| 04 · Contact | Your e-mail (`mailto:`), GitHub and LinkedIn URLs |
+| Hero | Role line and tagline under the name |
+| 01 · About | Personal story, facts (base, focus, languages, status) and the three "How I can help" offerings |
+| 02 · Work | Four project cards: title, text, tags, organisation |
+| 03 · Experience | Career timeline and the grouped toolkit chips |
+| 04 · Contact | E-mail and GitHub buttons |
 
-The page `<title>`, meta description and Open Graph tags are at the top of `index.html`.
+The e-mail address is stored as `data-mail="user|domain"` on the "Say hej" button and assembled by `js/ui.js`, so simple scrapers can't harvest it from the HTML. The page `<title>`, meta description and Open Graph tags are at the top of `index.html`.
 
 ## Tuning the forest
 

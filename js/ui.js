@@ -12,6 +12,12 @@ export function initUI() {
   const year = document.getElementById('year');
   if (year) year.textContent = String(new Date().getFullYear());
 
+  // e-mail links are assembled here so the address isn't sitting in the HTML for scrapers
+  document.querySelectorAll('[data-mail]').forEach((a) => {
+    const [user, domain] = a.dataset.mail.split('|');
+    a.href = `mailto:${user}@${domain}`;
+  });
+
   // stagger the words of the final sentence
   document.querySelectorAll('.finale__line .w').forEach((w, i) => w.style.setProperty('--i', i));
 
