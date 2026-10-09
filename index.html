@@ -6,8 +6,18 @@
   <title>Bernd Salomon — Senior Developer, Solution Architect &amp; local AI</title>
   <meta name="description" content="Bernd Salomon: 20+ years of software and data engineering. Helping people use AI properly and run their own sovereign, self-hosted AI setup." />
   <meta name="theme-color" content="#0b140e" />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://berndsalomon83.github.io/portfolio-website/" />
   <meta property="og:title" content="Bernd Salomon — Senior Developer, Solution Architect &amp; local AI" />
   <meta property="og:description" content="Use AI properly, and run it on your own ground. Let us build something new together." />
+  <meta property="og:image" content="https://berndsalomon83.github.io/portfolio-website/og-image.jpg" />
+  <meta property="og:image:type" content="image/jpeg" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta property="og:image:alt" content="Sunlight breaking through the crowns of a Swedish pine forest, with the name Bernd Salomon and the line: Let us build something new together." />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:image" content="https://berndsalomon83.github.io/portfolio-website/og-image.jpg" />
+  <link rel="canonical" href="https://berndsalomon83.github.io/portfolio-website/" />
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230b140e'/%3E%3Cpath d='M32 52V30' stroke='%23b9cc8e' stroke-width='3' stroke-linecap='round'/%3E%3Cpath d='M32 34c-9 0-14-6-14-14 9 0 14 6 14 14zM32 30c0-9 6-15 15-15 0 9-6 15-15 15z' fill='%23b9cc8e'/%3E%3C/svg%3E" />
 
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -48,6 +58,24 @@
       <a href="#about">About</a>
       <a href="#work">Work</a>
       <a href="#experience">Experience</a>
+      <div class="season" hidden>
+        <button class="season__toggle" type="button" aria-expanded="false" aria-controls="season-panel" title="Change the season">
+          <span class="season__icon" aria-hidden="true"></span>
+          <span class="season__name">Season</span>
+        </button>
+        <div class="season__panel glass" id="season-panel" hidden>
+          <p class="season__title">The forest through the year</p>
+          <div class="season__seg" role="group" aria-label="Season">
+            <button type="button" data-season="0.5">Spring</button>
+            <button type="button" data-season="1.5">Summer</button>
+            <button type="button" data-season="2.5">Autumn</button>
+            <button type="button" data-season="3.5">Winter</button>
+          </div>
+          <input class="season__range" type="range" min="0" max="4" step="0.01" value="2" aria-label="Time of year" />
+          <div class="season__months" aria-hidden="true"><span>Mar</span><span>Jun</span><span>Sep</span><span>Dec</span><span>Mar</span></div>
+          <button class="season__today" type="button">Back to today</button>
+        </div>
+      </div>
       <button class="nav__sound" type="button" aria-pressed="false" aria-label="Forest sounds" title="Forest sounds">
         <span class="nav__bars" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
         <span class="nav__sound-label">Sound</span>

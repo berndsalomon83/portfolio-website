@@ -5,7 +5,73 @@ import { SUN_DIR } from '../world/layout.js';
 export const shared = {
   uTime: { value: 0 },
   uWind: { value: 1 },
+  uSnow: { value: 0 }, // 0 = no snow … 1 = deep winter
 };
+
+// Seasonal colour + leaf loss per plant group, driven by js/world/seasons.js.
+// uSColor/uSAmount recolour the leaves (keeping their light and shade), uSLoss drops leaves or plants.
+const seasonGroup = () => ({ uSColor: { value: new THREE.Vector3(0.25, 0.45, 0.06) }, uSAmount: { value: 0 }, uSLoss: { value: 0 }, uSSnow: { value: 1 } });
+export const seasonUniforms = {
+  conifer: seasonGroup(),
+  birch: seasonGroup(),
+  berry: seasonGroup(),
+  lingon: seasonGroup(),
+  fern: seasonGroup(),
+  grass: seasonGroup(),
+  moss: seasonGroup(),
+  none: seasonGroup(),
+};
+
+const SEASON_VERT = /* glsl */ `
+varying float vSRnd;
+#if !defined(USE_COLOR) && !defined(USE_COLOR_ALPHA)
+  attribute vec3 color;
+#endif
+float seasonRandom() {
+#ifdef LOSS_PER_CARD
+  vec3 key = color.rgb;                 // every card has its own tint → its own random
+#else
+  vec3 key = vec3(0.37, 0.61, 0.13);    // whole plant at once
+#endif
+#ifdef USE_INSTANCING
+  vec2 inst = instanceMatrix[3].xz;
+#else
+  vec2 inst = modelMatrix[3].xz;
+#endif
+  return fract(sin(dot(key, vec3(12.9898, 78.233, 37.719)) * 1.37 + dot(inst, vec2(0.731, 0.397))) * 43758.5453);
+}`;
+
+// Season support for foliage: tint, leaves (or whole plants) dropping out, snow on top.
+// `depth` = the shadow material variant (only needs the drop-out so bare trees cast bare shadows).
+export function injectSeason(shader, group, { depth = false } = {}) {
+  const u = seasonUniforms[group] ?? seasonUniforms.none;
+  shader.uniforms.uSColor = u.uSColor;
+  shader.uniforms.uSAmount = u.uSAmount;
+  shader.uniforms.uSLoss = u.uSLoss;
+  shader.uniforms.uSSnow = u.uSSnow;
+  shader.uniforms.uSnow = shared.uSnow;
+  shader.vertexShader = shader.vertexShader
+    .replace('#include <common>', `#include <common>\n${SEASON_VERT}`)
+    .replace('#include <begin_vertex>', '#include <begin_vertex>\nvSRnd = seasonRandom();');
+  const pars = '#define HAS_SEASON\nuniform vec3 uSColor;\nuniform float uSAmount;\nuniform float uSLoss;\nuniform float uSSnow;\nuniform float uSnow;\nvarying float vSRnd;\nfloat sSnowMask = 0.0;';
+  if (depth) {
+    shader.fragmentShader = shader.fragmentShader
+      .replace('#include <common>', `#include <common>\n${pars}`)
+      .replace('void main() {', 'void main() {\n  if (vSRnd < uSLoss) discard;');
+    return;
+  }
+  shader.fragmentShader = shader.fragmentShader.replace('#include <common>', `#include <common>\n${pars}`).replace(
+    '#include <map_fragment>',
+    /* glsl */ `#include <map_fragment>
+  if (vSRnd < uSLoss) discard;
+  diffuseColor.rgb = mix(diffuseColor.rgb, dot(diffuseColor.rgb, vec3(0.299, 0.587, 0.114)) / 0.32 * uSColor, uSAmount);
+  {
+    vec3 sWn = normalize((vec4(vNormal, 0.0) * viewMatrix).xyz);
+    sSnowMask = smoothstep(0.12, 0.55, sWn.y + (vSRnd - 0.5) * 0.35) * uSnow * uSSnow;
+    diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.72, 0.75, 0.8), sSnowMask * 0.85);
+  }`,
+  );
+}
 
 const f = (x) => x.toFixed(5);
 
@@ -149,7 +215,12 @@ vec3 nonPerturbedNormal = normal;`,
   float tV = max(dot(-geometryViewDir, tL), 0.0);
   float tScatter = pow(tV, ${power.toFixed(1)}) * 1.6 + 0.22 * tV;
   float tBack = max(dot(-geometryNormal, tL), 0.0) * 0.25;
-  reflectedLight.directDiffuse += directLight.color * diffuseColor.rgb * uTrans * (tScatter + tBack);
+#ifdef HAS_SEASON
+  float tSnowK = 1.0 - sSnowMask;
+#else
+  float tSnowK = 1.0;
+#endif
+  reflectedLight.directDiffuse += directLight.color * diffuseColor.rgb * uTrans * (tScatter + tBack) * tSnowK;
 }
 #endif`,
     );

@@ -6,7 +6,7 @@ import { HASH_GLSL } from '../gl/noise.glsl.js';
 
 // Small things that sell the morning: dew drops, a spider web, sunlit dust, and the misty forest beyond.
 
-const sunHDR = new THREE.Vector3(SUN_COLOR.r, SUN_COLOR.g, SUN_COLOR.b).multiplyScalar(3.4);
+export const sunHDR = new THREE.Vector3(SUN_COLOR.r, SUN_COLOR.g, SUN_COLOR.b).multiplyScalar(3.4);
 
 // Shared shadow lookup so tiny things only sparkle where the sun really reaches.
 export const shadowUniforms = {
@@ -330,6 +330,133 @@ export function dustMotes(count) {
   pts.name = 'dust';
   return pts;
 }
+
+// Things that fall through the air: golden birch leaves in autumn, snowflakes in winter.
+// Particles wrap around the camera; `uAmount` (0..1) decides how many of them are present.
+function fallingParticles({ count, seed, box, leaf }) {
+  const rng = new RNG(seed);
+  const pos = new Float32Array(count * 3);
+  const rnd = new Float32Array(count);
+  for (let i = 0; i < count; i++) {
+    pos[i * 3] = rng.float(-1, 1);
+    pos[i * 3 + 1] = rng.float(-1, 1);
+    pos[i * 3 + 2] = rng.float(-1, 1);
+    rnd[i] = rng.next();
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  geo.setAttribute('aSeed', new THREE.BufferAttribute(rnd, 1));
+  const mat = new THREE.ShaderMaterial({
+    defines: leaf ? { LEAF: '' } : {},
+    uniforms: {
+      ...shadowUniforms,
+      uTime: { value: 0 },
+      uCam: { value: new THREE.Vector3() },
+      uBox: { value: new THREE.Vector3(...box) },
+      uSunDir: { value: SUN_DIR },
+      uSunColor: { value: sunHDR },
+      uPx: { value: 800 },
+      uAmount: { value: 0 },
+    },
+    vertexShader: /* glsl */ `
+      ${SHADOW_GLSL}
+      attribute float aSeed;
+      uniform float uTime;
+      uniform float uAmount;
+      uniform float uPx;
+      uniform vec3 uCam;
+      uniform vec3 uBox;
+      uniform vec3 uSunDir;
+      varying float vOn;
+      varying float vSpin;
+      varying float vFlip;
+      varying float vLight;
+      varying vec3 vTint;
+      varying float vPx;
+      void main() {
+        float s = aSeed;
+        vOn = step(fract(s * 17.31), uAmount);
+#ifdef LEAF
+        float fall = 0.28 + 0.22 * fract(s * 13.1);
+        float sway = 0.7;
+        float size = 0.05 + 0.025 * fract(s * 5.7);
+#else
+        float fall = 0.16 + 0.16 * fract(s * 13.1);
+        float sway = 0.45;
+        float size = 0.014 + 0.018 * fract(s * 5.7);
+#endif
+        vec3 p = position * uBox;
+        p.y -= uTime * fall;
+#ifdef LEAF
+        p.x += sin(uTime * 0.6 + s * 40.0) * sway + uTime * 0.12;
+        p.z += cos(uTime * 0.45 + s * 23.0) * sway;
+#else
+        // snow floats: slow wide swaying plus a little flutter, carried by a faint breeze
+        p.x += sin(uTime * 0.32 + s * 40.0) * sway + sin(uTime * 0.9 + s * 13.0) * 0.07 + uTime * 0.05;
+        p.z += cos(uTime * 0.27 + s * 23.0) * sway + cos(uTime * 0.8 + s * 7.0) * 0.06;
+#endif
+        vec3 rel = mod(p - uCam + uBox, uBox * 2.0) - uBox;
+        vec3 wp = uCam + rel;
+        vec4 mv = viewMatrix * vec4(wp, 1.0);
+        float dist = -mv.z;
+#ifdef LEAF
+        vPx = clamp(size * uPx / max(dist, 0.05), 1.5, 72.0);
+        vOn *= smoothstep(0.35, 1.2, dist);
+#else
+        vPx = clamp(size * uPx / max(dist, 0.05), 1.5, 120.0);
+        vOn *= smoothstep(0.15, 0.6, dist);
+#endif
+        gl_PointSize = vOn * vPx;
+        vOn *= 1.0 - smoothstep(uBox.x * 0.7, uBox.x, length(rel));
+        vSpin = uTime * (1.2 + 2.4 * fract(s * 7.3)) + s * 30.0;
+        vFlip = uTime * (0.9 + 1.6 * fract(s * 3.9)) + s * 11.0;
+        vec3 V = normalize(wp - cameraPosition);
+        float back = pow(max(dot(V, uSunDir), 0.0), 4.0);
+        vLight = sunVisibility(wp) * (0.6 + 1.6 * back);
+        vec3 gold = mix(vec3(0.62, 0.32, 0.03), vec3(0.75, 0.52, 0.07), fract(s * 3.7));
+        vTint = mix(gold, vec3(0.32, 0.14, 0.05), step(0.78, fract(s * 5.3)));
+        gl_Position = projectionMatrix * mv;
+      }`,
+    fragmentShader: /* glsl */ `
+      uniform vec3 uSunColor;
+      varying float vOn;
+      varying float vSpin;
+      varying float vFlip;
+      varying float vLight;
+      varying vec3 vTint;
+      varying float vPx;
+      void main() {
+        if (vOn < 0.01) discard;
+        vec2 q = gl_PointCoord * 2.0 - 1.0;
+#ifdef LEAF
+        float c = cos(vSpin), s = sin(vSpin);
+        q = vec2(c * q.x - s * q.y, s * q.x + c * q.y);
+        q.x /= max(abs(cos(vFlip)), 0.22);          // tumbling: the leaf turns edge-on and back
+        float d = length(q * vec2(1.0, 1.85));
+        if (d > 0.95) discard;
+        vec3 col = vTint * (0.18 + vLight * 0.32 * uSunColor);
+        gl_FragColor = vec4(col, 1.0);
+#else
+        float d = length(q);
+        // flakes close to the lens are big, out of focus and faint; distant ones small and soft
+        float blur = clamp(vPx / 60.0, 0.0, 1.0);
+        float a = (1.0 - smoothstep(mix(0.5, 0.0, blur), 1.0, d)) * vOn * mix(0.85, 0.3, blur);
+        if (a < 0.01) discard;
+        vec3 col = vec3(0.93, 0.95, 1.0) * (0.75 + vLight * 0.18 * length(uSunColor) / 1.7);
+        gl_FragColor = vec4(col, a);
+#endif
+      }`,
+    transparent: !leaf,
+    depthWrite: leaf,
+  });
+  const pts = new THREE.Points(geo, mat);
+  pts.frustumCulled = false;
+  pts.name = leaf ? 'falling-leaves' : 'snowfall';
+  return pts;
+}
+
+export const fallingLeaves = (count) => fallingParticles({ count, seed: 404, box: [10, 6, 10], leaf: true });
+export const snowfall = (count) => fallingParticles({ count, seed: 808, box: [8, 5, 8], leaf: false });
 
 // A ring of misty forest far away so the horizon never shows empty sky.
 export function forestBackdrop() {

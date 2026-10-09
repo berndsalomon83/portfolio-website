@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { installFog, shared } from '../gl/patches.js';
+import { installFog, shared, seasonUniforms } from '../gl/patches.js';
 import { Baker, SURF } from '../gl/bake.js';
 import { createFoliageTextures } from './foliage-textures.js';
 import { createSky } from './sky.js';
@@ -9,7 +9,7 @@ import { placeTrees, buildForest } from './trees.js';
 import { buildPlants } from './plants.js';
 import { buildProps } from './props.js';
 import { buildSapling } from './sapling.js';
-import { dewField, dewPoints, spiderWeb, dustMotes, forestBackdrop, shadowUniforms } from './details.js';
+import { dewField, dewPoints, spiderWeb, dustMotes, forestBackdrop, shadowUniforms, fallingLeaves, snowfall, sunHDR } from './details.js';
 import { RNG } from '../lib/random.js';
 import { SUN_DIR, SUN_COLOR, SAPLING } from './layout.js';
 
@@ -50,7 +50,8 @@ export async function createWorld(renderer, quality, progress = () => {}) {
   const hemi = new THREE.HemisphereLight(new THREE.Color(0.58, 0.7, 0.84), new THREE.Color(0.13, 0.13, 0.075), 0.82);
   scene.add(hemi);
 
-  scene.add(createSky());
+  const sky = createSky();
+  scene.add(sky);
 
   // ── textures ─────────────────────────────────────────────
   progress(0.04, 'Painting bark and moss');
@@ -132,7 +133,41 @@ export async function createWorld(renderer, quality, progress = () => {}) {
   details.add(dust);
   const backdrop = forestBackdrop();
   details.add(backdrop);
+  const leavesFx = fallingLeaves(quality.tier === 'low' ? 120 : 280);
+  const snowFx = snowfall(quality.tier === 'low' ? 900 : 2400);
+  details.add(leavesFx, snowFx);
   scene.add(details);
+
+  // ── seasons: light, mist, sky, plants, snow and what drifts through the air ──
+  const groundU = ground.material.userData.uniforms;
+  const groups = ['conifer', 'birch', 'berry', 'lingon', 'fern', 'grass', 'moss'];
+  let season = null;
+  const applySeason = (sp) => {
+    season = sp;
+    sun.color.setRGB(sp.sun[0], sp.sun[1], sp.sun[2]);
+    sun.intensity = sp.sunI;
+    sapling.fleck.color.copy(sun.color);
+    sunHDR.set(sp.sun[0], sp.sun[1], sp.sun[2]).multiplyScalar(sp.sunI);
+    hemi.color.setRGB(sp.hemiSky[0], sp.hemiSky[1], sp.hemiSky[2]);
+    hemi.groundColor.setRGB(sp.hemiGround[0], sp.hemiGround[1], sp.hemiGround[2]);
+    hemi.intensity = sp.hemiI;
+    scene.fog.color.setRGB(sp.fog[0], sp.fog[1], sp.fog[2]);
+    sky.material.uniforms.uTint.value.set(sp.sky[0], sp.sky[1], sp.sky[2]);
+    sky.material.uniforms.uSunCol.value.set(sp.sun[0], sp.sun[1] * 0.93, sp.sun[2] * 0.76);
+    shared.uSnow.value = sp.snow;
+    for (const g of groups) {
+      seasonUniforms[g].uSColor.value.set(sp[g].color[0], sp[g].color[1], sp[g].color[2]);
+      seasonUniforms[g].uSAmount.value = sp[g].amount;
+      seasonUniforms[g].uSLoss.value = sp[g].loss;
+    }
+    groundU.uSGround.value.set(sp.ground[0], sp.ground[1], sp.ground[2]);
+    groundU.uSLitter.value = sp.litter;
+    groundU.uDew.value = sp.dew;
+    leavesFx.material.uniforms.uAmount.value = sp.leaves;
+    snowFx.material.uniforms.uAmount.value = sp.snowfall;
+    dust.material.uniforms.uStrength.value = sp.dust;
+    sapling.setDew(sp.dew);
+  };
 
   const ctx = { scene, camera, sun, surfaces, foliage, noise, trees, eco, quality, renderer };
   const updaters = [];
@@ -144,10 +179,16 @@ export async function createWorld(renderer, quality, progress = () => {}) {
     shadowUniforms.uShadowMatrix.value.copy(sun.shadow.matrix);
     renderer.getDrawingBufferSize(size);
     dew.material.uniforms.uViewport.value.copy(size);
-    dew.material.uniforms.uStrength.value = 0.35 + 0.65 * THREE.MathUtils.smoothstep(look.growth, 0, 0.6);
-    dust.material.uniforms.uTime.value = time;
-    dust.material.uniforms.uCam.value.copy(camera.position);
-    dust.material.uniforms.uPx.value = (size.y * 0.5) / Math.tan(THREE.MathUtils.degToRad(camera.fov * 0.5));
+    dew.material.uniforms.uStrength.value = (0.35 + 0.65 * THREE.MathUtils.smoothstep(look.growth, 0, 0.6)) * (season ? season.dew : 1);
+    dew.visible = !season || season.dew > 0.02;
+    const px = (size.y * 0.5) / Math.tan(THREE.MathUtils.degToRad(camera.fov * 0.5));
+    for (const fx of [dust, leavesFx, snowFx]) {
+      fx.material.uniforms.uTime.value = time;
+      fx.material.uniforms.uCam.value.copy(camera.position);
+      fx.material.uniforms.uPx.value = px;
+    }
+    leavesFx.visible = !season || season.leaves > 0.01;
+    snowFx.visible = !season || season.snowfall > 0.01;
     backdrop.material.uniforms.uFog.value.copy(scene.fog.color);
     sapling.grow(look.growth, time);
   });
@@ -161,6 +202,7 @@ export async function createWorld(renderer, quality, progress = () => {}) {
     addUpdater(fn) {
       updaters.push(fn);
     },
+    applySeason,
     update(dt, time, look) {
       shared.uTime.value = time;
       scene.fog.density = look.fog;

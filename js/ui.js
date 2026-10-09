@@ -1,6 +1,18 @@
 // DOM side of the experience: loader, reveal-on-scroll, active nav link, height gauge, sound toggle.
 import { ForestAudio } from './audio.js';
 import { initLiquidGlass } from './liquid-glass.js';
+import { SEASON_NAMES, seasonIndex, seasonFromDate } from './world/seasons.js';
+
+const svg = (paths) =>
+  `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${paths}</svg>`;
+const SEASON_ICONS = [
+  svg('<path d="M12 21v-8"/><path d="M12 13c-4.2 0-6.5-2.6-6.5-6.2 4.2 0 6.5 2.6 6.5 6.2z"/><path d="M12 11c0-3.6 2.6-6.2 6.8-6.2 0 3.6-2.6 6.2-6.8 6.2z"/>'),
+  svg('<circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.3M12 19.2v2.3M2.5 12h2.3M19.2 12h2.3M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M5.3 18.7l1.6-1.6M17.1 6.9l1.6-1.6"/>'),
+  svg('<path d="M5 19c0-8.3 5.2-14 14-14 0 9.2-6 14-14 14z"/><path d="M5 19l7.5-7.5"/>'),
+  svg('<path d="M12 2.5v19M3.8 7.25l16.4 9.5M3.8 16.75l16.4-9.5"/><path d="M9.5 4l2.5 2.3L14.5 4M9.5 20l2.5-2.3 2.5 2.3"/>'),
+];
+const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+const monthOf = (v) => MONTHS[Math.floor((((v * 3 + 2) % 12) + 12) % 12)];
 
 const MAIL_SUBJECT = "Hej Bernd – let's talk";
 
@@ -121,6 +133,71 @@ export function initUI() {
   let shownPct = 0;
   return {
     chapters,
+    // season button + panel (only shown once the 3D forest is running)
+    bindSeasons(state) {
+      const box = document.querySelector('.season');
+      if (!box) return;
+      box.hidden = false;
+      const toggle = box.querySelector('.season__toggle');
+      const panel = box.querySelector('.season__panel');
+      const range = box.querySelector('.season__range');
+      const name = box.querySelector('.season__name');
+      const icon = box.querySelector('.season__icon');
+      const segs = [...box.querySelectorAll('[data-season]')];
+      const today = box.querySelector('.season__today');
+      let lastIndex = -1;
+      const sync = () => {
+        const v = state.target;
+        const i = seasonIndex(v);
+        if (i !== lastIndex) {
+          name.textContent = SEASON_NAMES[i];
+          icon.innerHTML = SEASON_ICONS[i];
+          segs.forEach((b, k) => b.classList.toggle('is-on', k === i));
+          lastIndex = i;
+        }
+        range.value = v.toFixed(2);
+        range.setAttribute('aria-valuetext', `${SEASON_NAMES[i]}, ${monthOf(v)}`);
+        toggle.setAttribute('aria-label', `Season: ${SEASON_NAMES[i]}. Change the season`);
+      };
+      let closeTimer = 0;
+      const open = () => {
+        clearTimeout(closeTimer);
+        panel.hidden = false;
+        void panel.offsetWidth;
+        panel.classList.add('is-open');
+        toggle.setAttribute('aria-expanded', 'true');
+      };
+      const close = () => {
+        panel.classList.remove('is-open');
+        toggle.setAttribute('aria-expanded', 'false');
+        closeTimer = setTimeout(() => (panel.hidden = true), 350);
+      };
+      toggle.addEventListener('click', () => (panel.hidden ? open() : close()));
+      range.addEventListener('input', () => {
+        state.set(Number(range.value));
+        sync();
+      });
+      segs.forEach((b) =>
+        b.addEventListener('click', () => {
+          state.set(Number(b.dataset.season));
+          sync();
+        }),
+      );
+      today.addEventListener('click', () => {
+        state.set(seasonFromDate());
+        sync();
+      });
+      document.addEventListener('pointerdown', (e) => {
+        if (!panel.hidden && !box.contains(e.target)) close();
+      });
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && !panel.hidden) {
+          close();
+          toggle.focus();
+        }
+      });
+      sync();
+    },
     progress(p, text) {
       shownPct = Math.max(shownPct, Math.round(p * 100));
       if (pct) pct.textContent = String(shownPct);

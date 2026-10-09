@@ -4,6 +4,7 @@ import { createWorld } from './world/world.js';
 import { Pipeline } from './post/pipeline.js';
 import { Story } from './story.js';
 import { initUI } from './ui.js';
+import { SeasonState, seasonFromDate } from './world/seasons.js';
 
 const ui = initUI();
 
@@ -38,6 +39,19 @@ async function boot() {
   const world = await createWorld(renderer, quality, ui.progress);
   const pipeline = new Pipeline(renderer, world, quality);
   const story = new Story(ui.chapters);
+  const seasons = new SeasonState(params.has('season') ? Number(params.get('season')) : seasonFromDate());
+  ui.bindSeasons(seasons);
+  // season-adjusted look for this frame
+  const seasonLook = (l, sp) => {
+    l.exposure *= sp.exposure;
+    l.saturation *= sp.saturation;
+    l.fog *= sp.fogMul;
+    l.vol *= sp.volMul;
+    l.warmth = sp.warmth;
+    l.sun = sp.sun;
+    l.sunI = sp.sunI;
+    return l;
+  };
   if (params.has('s')) story.s = story.force = Number(params.get('s'));
 
   for (const name of ['ground', 'forest', 'plants', 'props', 'details']) {
@@ -69,7 +83,8 @@ async function boot() {
   ui.progress(0.88, 'Letting the light in');
   let time = 0;
   story.applyCamera(world.camera, time);
-  let look = story.look();
+  world.applySeason(seasons.update(0));
+  let look = seasonLook(story.look(), seasons.params);
   world.update(0, time, look);
   renderer.shadowMap.needsUpdate = true;
   try {
@@ -117,7 +132,9 @@ async function boot() {
 
     story.update(dt);
     story.applyCamera(world.camera, time);
-    look = story.look();
+    const sp = seasons.update(dt);
+    world.applySeason(sp);
+    look = seasonLook(story.look(), sp);
     story.height = look.height;
     look.fade = fade * fade * (3 - 2 * fade);
     if (window.forest?.override) Object.assign(look, window.forest.override);

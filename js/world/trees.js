@@ -574,11 +574,11 @@ export function buildForest({ trees, surfaces, foliage, quality }) {
   const spruceBark = barkMaterial({ texA: surfaces.spruce, texB: surfaces.spruce, mixAt: 2, height: 21 });
   const birchBark = barkMaterial({ texA: surfaces.birchBase, texB: surfaces.birch, mixAt: 0.07, mixWidth: 0.035, scaleB: [1, 1], height: 16, footMoss: 0.6 });
 
-  const pineLeaf = foliage.pine.map((map, i) => foliageMaterial({ map, height: 22, trans: [0.9, 0.85, 0.45], key: `pine${i}` }));
-  const spruceLeaf = foliage.spruce.map((map, i) => foliageMaterial({ map, height: 21, trans: [0.65, 0.8, 0.35], key: `spruce${i}` }));
-  const combLeaf = foliageMaterial({ map: foliage.spruceComb, height: 21, trans: [0.6, 0.75, 0.32], key: 'comb' });
+  const pineLeaf = foliage.pine.map((map, i) => foliageMaterial({ map, height: 22, trans: [0.9, 0.85, 0.45], key: `pine${i}`, season: 'conifer' }));
+  const spruceLeaf = foliage.spruce.map((map, i) => foliageMaterial({ map, height: 21, trans: [0.65, 0.8, 0.35], key: `spruce${i}`, season: 'conifer' }));
+  const combLeaf = foliageMaterial({ map: foliage.spruceComb, height: 21, trans: [0.6, 0.75, 0.32], key: 'comb', season: 'conifer' });
   const lichenMat = foliageMaterial({ map: foliage.lichen, height: 21, trans: [0.9, 0.95, 0.8], power: 3, key: 'lichen' });
-  const birchLeaf = foliage.birch.map((map, i) => foliageMaterial({ map, height: 16, trans: [1.25, 1.1, 0.35], power: 3, key: `birch${i}` }));
+  const birchLeaf = foliage.birch.map((map, i) => foliageMaterial({ map, height: 16, trans: [1.25, 1.1, 0.35], power: 3, key: `birch${i}`, season: 'birch', lossPerCard: true }));
 
   const variants = {
     pine: { near: quality.tier === 'low' ? 2 : 4, far: 2, build: buildPine, bark: pineBark, leaf: (i) => pineLeaf[i % 2] },

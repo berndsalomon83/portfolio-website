@@ -478,6 +478,8 @@ export class Pipeline {
     cu.uSaturation.value = look.saturation;
     cu.uTime.value = time;
     cu.uFade.value = look.fade ?? 1;
+    cu.uWarmth.value = look.warmth ?? 1;
+    if (look.sun) cu.uSunColor.value.set(look.sun[0], look.sun[1], look.sun[2]).multiplyScalar((look.sunI ?? 3.4) * (3.2 / 3.4));
     this.draw(this.composite, null);
   }
 }

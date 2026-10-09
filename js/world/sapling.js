@@ -66,6 +66,7 @@ export function buildSapling({ foliage, quality }) {
   const dropGeo = new THREE.SphereGeometry(1, 18, 12);
   const leafDepth = new THREE.MeshDepthMaterial({ depthPacking: THREE.RGBADepthPacking, map: foliage.oak, alphaTest: 0.5, side: THREE.DoubleSide });
 
+  // The seedling stays fresh green and full in every season: it stands for what is being built.
   const leafMat = (tint) => {
     const m = new THREE.MeshStandardMaterial({
       map: foliage.oak,
@@ -158,6 +159,11 @@ export function buildSapling({ foliage, quality }) {
   fleck.userData.full = 3.4 * 22 * 22 * 0.24;
 
   const state = { g: -1 };
+  // dew only forms when it isn't frozen; the leaves themselves never change with the season
+  let dewAmount = 1;
+  const setDew = (dew) => {
+    dewAmount = dew;
+  };
   function grow(g, time) {
     const G = g * (N + 1.2);
     let y = 0;
@@ -189,7 +195,7 @@ export function buildSapling({ foliage, quality }) {
       u.mesh.scale.x = (0.25 + 0.75 * e) * u.mesh.scale.y;
       p.scale.setScalar(0.35 + 0.65 * s);
       u.mesh.material.color.setRGB(1.0 - 0.18 * e, 0.6 + 0.3 * e, 0.42 + 0.33 * e);
-      for (const d of u.drops) d.visible = e > 0.85;
+      for (const d of u.drops) d.visible = e > 0.85 && dewAmount > 0.5;
     }
     fleck.intensity = fleck.userData.full * ease(clamp01(g * 1.6 - 0.1));
     state.g = g;
@@ -197,5 +203,5 @@ export function buildSapling({ foliage, quality }) {
   }
   grow(0, 0);
 
-  return { group, fleck, grow, leaves, dewMaterial: dewMat };
+  return { group, fleck, grow, setDew, leaves, dewMaterial: dewMat };
 }

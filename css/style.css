@@ -212,6 +212,112 @@ main { position: relative; z-index: 2; }
 .nav__sound[aria-pressed='true'] .nav__bars i:nth-child(4) { animation-delay: -0.2s; }
 @keyframes bars { from { height: 3px; } to { height: 12px; } }
 
+/* Season control: a nav button that opens a small glass panel with a slider through the year */
+.season { position: relative; display: inline-flex; }
+.season[hidden] { display: none; }
+.season__toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 2px;
+  border: 0;
+  background: none;
+  color: var(--ink-soft);
+  font: inherit;
+  font-size: 0.86rem;
+  letter-spacing: 0.03em;
+  cursor: pointer;
+  transition: color 0.3s;
+}
+.season__toggle:hover,
+.season__toggle[aria-expanded='true'] { color: var(--ink); }
+.season__toggle:focus-visible { outline: 2px solid var(--gold); outline-offset: 4px; border-radius: 6px; }
+.season__icon { display: inline-grid; place-items: center; width: 16px; height: 16px; color: var(--gold); }
+.season__icon svg { width: 16px; height: 16px; }
+.nav .season__panel {
+  position: fixed;
+  top: 78px;
+  right: var(--gutter);
+  z-index: 30;
+  width: 300px;
+  padding: 16px 18px 14px;
+  border-radius: 20px;
+  color: var(--ink);
+  opacity: 0;
+  transform: translateY(-6px);
+  transition: opacity 0.35s var(--ease), transform 0.35s var(--ease);
+}
+.season__panel.is-open { opacity: 1; transform: none; }
+.season__title {
+  margin: 0 0 12px;
+  font-size: 0.7rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink-mute);
+}
+.season__seg { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; margin-bottom: 14px; }
+.season__seg button {
+  padding: 7px 0;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--ink-soft);
+  font: inherit;
+  font-size: 0.78rem;
+  cursor: pointer;
+  transition: background 0.3s, color 0.3s;
+}
+.season__seg button:hover { background: rgba(255, 255, 255, 0.1); color: var(--ink); }
+.season__seg button.is-on { background: rgba(243, 203, 125, 0.22); color: var(--gold); box-shadow: inset 0 0 0 1px rgba(243, 203, 125, 0.45); }
+.season__range {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 6px;
+  margin: 4px 0 6px;
+  border-radius: 99px;
+  background: linear-gradient(90deg, #a8d98a 0%, #4f8f3c 25%, #3f7a33 37%, #e0a93c 55%, #b5562e 68%, #d7e4ee 80%, #eef3f8 90%, #a8d98a 100%);
+  outline: none;
+  cursor: pointer;
+}
+.season__range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #fff 0%, #f6e6c4 45%, #f3cb7d 100%);
+  box-shadow: 0 0 0 3px rgba(243, 203, 125, 0.35), 0 2px 8px rgba(0, 0, 0, 0.45);
+}
+.season__range::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border: 0;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #fff 0%, #f6e6c4 45%, #f3cb7d 100%);
+  box-shadow: 0 0 0 3px rgba(243, 203, 125, 0.35), 0 2px 8px rgba(0, 0, 0, 0.45);
+}
+.season__range:focus-visible { box-shadow: 0 0 0 2px var(--gold); }
+.season__months {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.66rem;
+  letter-spacing: 0.08em;
+  color: var(--ink-mute);
+  font-variant-numeric: tabular-nums;
+}
+.season__today {
+  margin-top: 10px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--gold);
+  font: inherit;
+  font-size: 0.78rem;
+  letter-spacing: 0.03em;
+  cursor: pointer;
+}
+.season__today:hover { text-decoration: underline; text-underline-offset: 3px; }
+
 /* ── Height gauge ──────────────────────────────────────────── */
 
 .gauge {
@@ -767,7 +873,9 @@ a:focus-visible { outline: 2px solid var(--gold); outline-offset: 4px; border-ra
 
 @media (max-width: 760px) {
   .nav__sound-label { display: none; }
-  .nav__links { gap: 14px; }
+  .nav__links { gap: 11px; }
+  .season__name { display: none; }
+  .nav .season__panel { top: 66px; right: 16px; width: min(320px, calc(100vw - 32px)); }
   .nav__links a:not(.nav__cta) { font-size: 0.82rem; }
   .gauge { display: none; }
   .chapter { padding: 16vh var(--gutter); }

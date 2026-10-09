@@ -176,7 +176,7 @@ export function buildPlants({ foliage, trees, eco, quality }) {
   const add = (m) => m && group.add(m);
 
   // ── blueberry ──
-  const berryMat = foliageMaterial({ map: foliage.blueberry, wind: 'plant', height: 0.32, trans: [0.5, 0.65, 0.22], key: 'berry' });
+  const berryMat = foliageMaterial({ map: foliage.blueberry, wind: 'plant', height: 0.32, trans: [0.5, 0.65, 0.22], key: 'berry', season: 'berry' });
   const berryPts = scatterNearPath(rng, Math.round(12000 * k), 13, (x, z) => {
     if (nearTrunk(x, z, 0.25) || dS(x, z) < 0.55 || distToCameraEnd(x, z) < 1.0) return false;
     if (distToSightline(x, z) < 0.35) return false;
@@ -188,7 +188,7 @@ export function buildPlants({ foliage, trees, eco, quality }) {
   }
 
   // ── lingon ──
-  const lingMat = foliageMaterial({ map: foliage.lingon, wind: 'plant', height: 0.2, trans: [0.45, 0.55, 0.2], key: 'lingon' });
+  const lingMat = foliageMaterial({ map: foliage.lingon, wind: 'plant', height: 0.2, trans: [0.45, 0.55, 0.2], key: 'lingon', season: 'lingon' });
   const lingPts = scatterNearPath(rng, Math.round(2600 * k), 7, (x, z) => {
     if (nearTrunk(x, z, 0.2) || dS(x, z) < 0.45 || distToCameraEnd(x, z) < 0.7 || distToSightline(x, z) < 0.3) return false;
     const e = eco.ecoAt(x, z);
@@ -199,7 +199,7 @@ export function buildPlants({ foliage, trees, eco, quality }) {
   add(instanced(shrub(rng, 0.26, 0.2, 3), lingMat, lingPts, rng, { scale: [0.75, 1.2] }));
 
   // ── ferns ──
-  const fernMats = foliage.fern.map((map, i) => foliageMaterial({ map, wind: 'plant', height: 0.6, trans: [0.7, 0.8, 0.28], power: 3, key: `fern${i}` }));
+  const fernMats = foliage.fern.map((map, i) => foliageMaterial({ map, wind: 'plant', height: 0.6, trans: [0.7, 0.8, 0.28], power: 3, key: `fern${i}`, season: 'fern' }));
   const fernPts = scatterNearPath(rng, Math.round(300 * k), 9, (x, z) => {
     if (nearTrunk(x, z, 0.4) || dS(x, z) < 1.1 || distToCameraEnd(x, z) < 1.7 || distToSightline(x, z) < 0.8) return false;
     const e = eco.ecoAt(x, z);
@@ -213,7 +213,7 @@ export function buildPlants({ foliage, trees, eco, quality }) {
   }
 
   // ── wavy hair-grass ──
-  const grassMat = foliageMaterial({ map: null, wind: 'plant', height: 0.35, trans: [1.2, 1.1, 0.5], a2c: false, alphaTest: 0, power: 3, key: 'grass' });
+  const grassMat = foliageMaterial({ map: null, wind: 'plant', height: 0.35, trans: [1.2, 1.1, 0.5], a2c: false, alphaTest: 0, power: 3, key: 'grass', season: 'grass' });
   const grassPts = scatterNearPath(rng, Math.round(1700 * k), 8, (x, z) => {
     if (nearTrunk(x, z, 0.3) || dS(x, z) < 0.5 || distToCameraEnd(x, z) < 0.6 || distToSightline(x, z) < 0.25) return false;
     const e = eco.ecoAt(x, z);
@@ -222,7 +222,7 @@ export function buildPlants({ foliage, trees, eco, quality }) {
   add(instanced(grassTuft(rng), grassMat, grassPts, rng, { scale: [0.7, 1.3], tilt: 0.1 }));
 
   // ── feather-moss tufts: the fluffy 3D surface of the close-up ──
-  const mossMat = foliageMaterial({ map: foliage.moss, wind: 'plant', height: 0.06, trans: [0.32, 0.4, 0.1], key: 'moss' });
+  const mossMat = foliageMaterial({ map: foliage.moss, wind: 'plant', height: 0.06, trans: [0.32, 0.4, 0.1], key: 'moss', season: 'moss' });
   const cx = (S.x + 1.3) / 2;
   const cz = (S.y - 15) / 2;
   const mossPts = scatterDisc(rng, Math.round(14000 * k), cx, cz - 0.5, 5.5, (x, z) => {

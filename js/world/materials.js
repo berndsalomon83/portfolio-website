@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { shared, injectWind, injectFoliage } from '../gl/patches.js';
+import { shared, injectWind, injectFoliage, injectSeason } from '../gl/patches.js';
 import { HASH_GLSL } from '../gl/noise.glsl.js';
 import { SUN_DIR } from './layout.js';
 
@@ -18,6 +18,8 @@ export function foliageMaterial({
   side = THREE.DoubleSide,
   vertexColors = true,
   key = 'a',
+  season = 'none',
+  lossPerCard = false,
 }) {
   const mat = new THREE.MeshLambertMaterial({
     map,
@@ -36,8 +38,10 @@ export function foliageMaterial({
     sh.uniforms.uTrans = uTrans;
     injectWind(sh, wind);
     injectFoliage(sh, { power });
+    injectSeason(sh, season);
   };
-  mat.customProgramCacheKey = () => `foliage-${wind}-${power}-${key}`;
+  mat.customProgramCacheKey = () => `foliage-${wind}-${power}-${key}-${lossPerCard ? 'card' : 'plant'}`;
+  if (lossPerCard) mat.defines = { LOSS_PER_CARD: '' };
 
   const depth = new THREE.MeshDepthMaterial({ depthPacking: THREE.RGBADepthPacking, map, alphaTest, side });
   depth.onBeforeCompile = (sh) => {
@@ -45,8 +49,10 @@ export function foliageMaterial({
     sh.uniforms.uWind = shared.uWind;
     sh.uniforms.uTreeH = uH;
     injectWind(sh, wind);
+    injectSeason(sh, season, { depth: true });
   };
-  depth.customProgramCacheKey = () => `foliage-depth-${wind}`;
+  depth.customProgramCacheKey = () => `foliage-depth-${wind}-${lossPerCard ? 'card' : 'plant'}`;
+  if (lossPerCard) depth.defines = { LOSS_PER_CARD: '' };
   mat.userData.depth = depth;
   mat.userData.uH = uH;
   mat.userData.uTrans = uTrans;
@@ -83,7 +89,7 @@ export function barkMaterial({ texA, texB, mixAt = 2, mixWidth = 0.05, scaleB = 
     uMoss: { value: new THREE.Vector2(footMoss, topMoss) },
   };
   mat.onBeforeCompile = (sh) => {
-    Object.assign(sh.uniforms, u, { uTime: shared.uTime, uWind: shared.uWind, uTreeH: uH });
+    Object.assign(sh.uniforms, u, { uTime: shared.uTime, uWind: shared.uWind, uTreeH: uH, uSnow: shared.uSnow });
     if (wind) injectWind(sh, 'tree');
     else sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nattribute float aSway;');
     sh.vertexShader = sh.vertexShader
@@ -107,6 +113,7 @@ uniform sampler2D uMapB;
 uniform sampler2D uNormB;
 uniform vec4 uBark;
 uniform vec2 uMoss;
+uniform float uSnow;
 varying float vH;
 varying float vLY;
 varying vec3 vWN;
@@ -141,6 +148,10 @@ float bMoss = 0.0;`,
 #ifdef TREE_BARK
   c.rgb *= mix(0.5, 1.0, smoothstep(-0.15, 0.8, vLY));
 #endif
+  // winter: snow settles on everything that faces up (branches, logs, stumps)
+  float bSnow = smoothstep(0.25, 0.65, wn.y + (nz - 0.5) * 0.6) * uSnow;
+  c.rgb = mix(c.rgb, vec3(0.72, 0.75, 0.8), bSnow);
+  bMoss = max(bMoss, bSnow);
   diffuseColor *= c;
 }`,
       )
@@ -183,10 +194,12 @@ export function groundMaterial({ moss, litter, noise, eco, ecoRect }) {
     uEco: { value: eco },
     uEcoRect: { value: new THREE.Vector4(...ecoRect) },
     uDew: { value: 1 },
+    uSGround: { value: new THREE.Vector3(1, 1, 1) },
+    uSLitter: { value: 0 },
   };
   mat.userData.uniforms = u;
   mat.onBeforeCompile = (sh) => {
-    Object.assign(sh.uniforms, u);
+    Object.assign(sh.uniforms, u, { uSnow: shared.uSnow });
     sh.vertexShader = sh.vertexShader
       .replace('#include <common>', '#include <common>\nvarying vec3 vWP;\nvarying vec3 vGN;')
       .replace(
@@ -201,9 +214,13 @@ ${HASH_GLSL}
 uniform sampler2D uMossC, uMossN, uLitC, uLitN, uNoise, uEco;
 uniform vec4 uEcoRect;
 uniform float uDew;
+uniform float uSnow;
+uniform vec3 uSGround;
+uniform float uSLitter;
 varying vec3 vWP;
 varying vec3 vGN;
 float gMoss = 1.0;
+float gSnow = 0.0;
 float gRough = 1.0;
 vec3 gN = vec3(0.0, 0.0, 1.0);
 vec2 rot2(vec2 p, float a) { float c = cos(a), s = sin(a); return vec2(c * p.x - s * p.y, s * p.x + c * p.y); }`,
@@ -240,9 +257,28 @@ vec2 rot2(vec2 p, float a) { float c = cos(a), s = sin(a); return vec2(c * p.x -
   col *= mix(1.0, 0.78, eco.b);
   col *= 0.86 + 0.28 * nz.b;
   col = mix(col, col * vec3(1.12, 1.02, 0.78), smoothstep(0.55, 0.8, nz.g) * 0.5);
+  col *= uSGround;
+  // autumn: fallen birch leaves scattered over moss and needles
+  if (uSLitter > 0.001) {
+    vec2 lp = w * 6.0;
+    vec2 lid = floor(lp);
+    vec3 lr = hash32(lid + 11.0);
+    if (lr.x < 0.42 * uSLitter) {
+      float a = lr.y * 6.2832;
+      vec2 q = fract(lp) - 0.5 - (hash22(lid + 5.0) - 0.5) * 0.4;
+      q = vec2(cos(a) * q.x - sin(a) * q.y, sin(a) * q.x + cos(a) * q.y);
+      float lm = smoothstep(0.2, 0.15, length(q * vec2(1.0, 1.9)));
+      vec3 lc2 = mix(vec3(0.62, 0.3, 0.025), vec3(0.72, 0.5, 0.06), lr.z);
+      lc2 = mix(lc2, vec3(0.28, 0.12, 0.04), step(0.72, fract(lr.x * 9.7)));
+      col = mix(col, lc2, lm);
+    }
+  }
+  // winter: snow cover, thinner under the dense spruces
+  gSnow = smoothstep(0.42, 0.62, uSnow * 1.15 + (nz.r - 0.5) * 0.55 - (1.0 - eco.r) * 0.22) * step(0.001, uSnow);
+  col = mix(col, vec3(0.74, 0.77, 0.82), gSnow);
   diffuseColor.rgb *= col;
-  gRough = mix(lc.a, mc.a, m);
-  gN = normalize(mix(ln.xyz, mn.xyz, m) * 2.0 - 1.0);
+  gRough = mix(mix(lc.a, mc.a, m), 0.5, gSnow);
+  gN = normalize(mix(mix(ln.xyz, mn.xyz, m) * 2.0 - 1.0, vec3(0.0, 0.0, 1.0), gSnow * 0.85));
 }`,
       )
       .replace('#include <roughnessmap_fragment>', 'float roughnessFactor = gRough;')
@@ -262,11 +298,12 @@ vec2 rot2(vec2 p, float a) { float c = cos(a), s = sin(a); return vec2(c * p.x -
 #if NUM_DIR_LIGHTS > 0
 {
   float dist = length(vWP - cameraPosition);
-  if (dist < 16.0 && uDew > 0.0) {
+  float glint = max(uDew * 1.0, gSnow * 1.3);
+  if (dist < 16.0 && glint > 0.0) {
     vec2 cp = vWP.xz * 85.0;
     vec2 cid = floor(cp);
     float r = hash12(cid);
-    if (r > 0.82 - 0.1 * gMoss) {
+    if (r > 0.82 - 0.1 * max(gMoss, gSnow) - 0.08 * gSnow) {
       vec2 off = hash22(cid + 3.1) - 0.5;
       float dd = length(fract(cp) - 0.5 - off * 0.5);
       float drop = smoothstep(0.34, 0.1, dd);
@@ -275,7 +312,7 @@ vec2 rot2(vec2 p, float a) { float c = cos(a), s = sin(a); return vec2(c * p.x -
       vec3 rnV = normalize((viewMatrix * vec4(rn, 0.0)).xyz);
       vec3 R = reflect(-geometryViewDir, rnV);
       float sp = pow(max(dot(R, directLight.direction), 0.0), 700.0);
-      reflectedLight.directSpecular += directLight.color * sp * drop * 70.0 * uDew * (0.3 + 0.7 * gMoss) * (1.0 - smoothstep(9.0, 16.0, dist));
+      reflectedLight.directSpecular += directLight.color * sp * drop * 70.0 * glint * (0.3 + 0.7 * max(gMoss, gSnow)) * (1.0 - smoothstep(9.0, 16.0, dist));
     }
   }
 }
@@ -297,7 +334,7 @@ export function rockMaterial({ rock, moss, mossBias = 0, scale = 0.45 }) {
     uRock: { value: new THREE.Vector2(scale, mossBias) },
   };
   mat.onBeforeCompile = (sh) => {
-    Object.assign(sh.uniforms, u);
+    Object.assign(sh.uniforms, u, { uSnow: shared.uSnow });
     sh.vertexShader = sh.vertexShader
       .replace('#include <common>', '#include <common>\nvarying vec3 vWP;\nvarying vec3 vWN;')
       .replace(
@@ -312,6 +349,7 @@ vWN = normalize(mat3(modelMatrix) * objectNormal);`,
         /* glsl */ `#include <common>
 uniform sampler2D uRockC, uRockN, uMossC, uMossN;
 uniform vec2 uRock;
+uniform float uSnow;
 varying vec3 vWP;
 varying vec3 vWN;
 float rMoss = 0.0;
@@ -345,6 +383,10 @@ vec3 rWN = vec3(0.0, 1.0, 0.0);`,
   rWN = normalize(mix(rockN, mnW, rMoss));
   diffuseColor.rgb *= mix(rc.rgb, mc.rgb * 0.95, rMoss);
   rRough = mix(rc.a, mc.a, rMoss);
+  float rSnow = smoothstep(0.3, 0.6, N.y + (hgt - 0.5) * 0.4) * uSnow;
+  diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.74, 0.77, 0.82), rSnow);
+  rRough = mix(rRough, 0.5, rSnow);
+  rWN = normalize(mix(rWN, N, rSnow));
 }`,
       )
       .replace('#include <roughnessmap_fragment>', 'float roughnessFactor = rRough;')

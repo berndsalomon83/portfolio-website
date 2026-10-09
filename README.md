@@ -41,6 +41,7 @@ E-mail addresses (`data-mail="user|domain"`) and phone numbers (`data-tel="prefi
 | File | What it controls |
 | --- | --- |
 | `js/story.js` | Camera keyframes per chapter (`CAM`) and the look of each chapter (`LOOK`): exposure, haze, god rays, depth of field |
+| `js/world/seasons.js` | The four seasons: light, mist, leaf colours, snow, falling leaves and snowfall. The season starts at today's date; visitors can change it with the season button in the navigation |
 | `js/world/layout.js` | Sun height and direction, the camera's walking line, where the sapling grows |
 | `js/quality.js` | Rendering budgets for low, medium and high quality (pixel count, shadows, volumetrics, tree count) |
 | `js/world/trees.js` | Procedural Scots pine, Norway spruce, birch and young understory spruces; hand-placed hero trees |
@@ -60,6 +61,10 @@ E-mail addresses (`data-mail="user|domain"`) and phone numbers (`data-tel="prefi
 - **Performance**: the 3D layer renders at a fixed pixel budget for each quality tier (the HTML stays sharp), and the resolution adapts automatically if frames get slow. Medium quality runs at about 10–15 ms per frame at 1280×800 on an AMD Radeon 890M integrated GPU.
 - **Accessibility**: all content is real HTML. The canvas is decorative (`aria-hidden`), `prefers-reduced-motion` is respected, and without WebGL 2 the page falls back to a static gradient.
 
+## Share preview
+
+`og-image.jpg` (1200×630) is the picture LinkedIn, WhatsApp, Slack and others show when the link is shared. It was rendered from the scene itself. After changing it, LinkedIn's [Post Inspector](https://www.linkedin.com/post-inspector/) refreshes their cached preview.
+
 ## Debug URL parameters
 
 | Parameter | Effect |
@@ -67,6 +72,7 @@ E-mail addresses (`data-mail="user|domain"`) and phone numbers (`data-tel="prefi
 | `?debug` | FPS / resolution overlay |
 | `?quality=low\|medium\|high` | Force a quality tier |
 | `?s=0..4` | Pin the camera at a story position (0 = canopy, 4 = forest floor) |
+| `?season=0..4` | Start in a season (0.5 spring, 1.5 summer, 2.5 autumn, 3.5 winter) |
 | `?clean` | Hide the HTML overlay to look at the scene |
 | `?novol` `?noshadow` | Disable volumetric light or shadows |
 | `?nodynres` | Disable adaptive resolution |
