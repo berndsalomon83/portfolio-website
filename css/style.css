@@ -216,7 +216,7 @@ main { position: relative; z-index: 2; }
   background: none;
   color: var(--ink-soft);
   cursor: pointer;
-  transition: color 0.3s, transform 0.8s var(--ease);
+  transition: color 0.3s, transform 1s var(--ease);
 }
 .nav__zen svg { width: 18px; height: 18px; }
 .nav__zen:hover,
@@ -224,7 +224,12 @@ main { position: relative; z-index: 2; }
 .nav__zen[aria-pressed='true'] { transform: rotate(180deg); }
 .nav__zen:focus-visible { outline: 2px solid var(--gold); outline-offset: 4px; border-radius: 50%; }
 main, .gauge, .scrim, .nav__links > a, .season, .nav__sound-label { transition: opacity 1s var(--ease); }
-.zen main, .zen .gauge, .zen .scrim, .zen .nav__links > a, .zen .season, .zen .nav__sound-label, .zen .nav::before { opacity: 0 !important; pointer-events: none; }
+.zen main, .zen .gauge, .zen .scrim, .zen .nav__links > a, .zen .nav__sound-label, .zen .nav::before { opacity: 0 !important; pointer-events: none; }
+/* the controls that stay (season, zen, sound) glide over to the right edge where Contact was, and back again;
+   ui.js measures the distance (--zen-shift). The season button moves, not its box, so its panel stays put. */
+.season__toggle, .nav__sound { transition: color 0.3s, transform 1s var(--ease); }
+.zen .season__toggle, .zen .nav__sound { transform: translateX(var(--zen-shift, 0px)); }
+.zen .nav__zen { transform: translateX(var(--zen-shift, 0px)) rotate(180deg); }
 .zen-card {
   position: fixed;
   left: 50%;

@@ -159,8 +159,19 @@ export function initUI() {
     const input = () => {
       lastInput = performance.now();
     };
+    // how far the remaining controls glide right in zen: from the sound bars to where Contact ends
+    // (layout offsets, so the slide itself doesn't change the measurement)
+    const cta = document.querySelector('.nav__cta');
+    const bars = document.querySelector('.nav__bars');
+    const measureShift = () => {
+      if (!cta || !bars) return;
+      const shift = cta.offsetLeft + cta.offsetWidth - (bars.offsetLeft + bars.offsetWidth);
+      root.style.setProperty('--zen-shift', `${Math.max(0, shift)}px`);
+    };
+    addEventListener('resize', measureShift);
     const setZen = (v) => {
       on = v;
+      measureShift();
       root.classList.toggle('zen', on);
       zen.setAttribute('aria-pressed', String(on));
       zen.setAttribute('aria-label', on ? 'Bring back the text' : 'Let me zone out a little: hide the text');
