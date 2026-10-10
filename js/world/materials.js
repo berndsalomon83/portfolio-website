@@ -5,6 +5,47 @@ import { SUN_DIR } from './layout.js';
 
 const f = (x) => x.toFixed(5);
 
+// Fidelity switches, set from the quality tier before the world is built.
+const OPTS = { pom: false, pbr: false };
+export function setMaterialOptions(o) {
+  Object.assign(OPTS, o);
+}
+
+// Parallax occlusion mapping: `hgtExpr(uv)` must evaluate to the surface height (0..1) at `uv`.
+// Marches 14 layers from the top surface down and interpolates the hit; only within `fadeFar` metres.
+const POM_GLSL = (hgtExpr, fadeNear, fadeFar) => /* glsl */ `
+  {
+    float pDist = length(vViewPosition);
+    float pFade = (1.0 - smoothstep(${f(fadeNear)}, ${f(fadeFar)}, pDist)) * uPom;
+    if (pFade > 0.0001) {
+      vec3 pN = normalize(vNormal);
+      mat3 ptbn = getTangentFrame(-vViewPosition, pN, vMapUv);
+      vec3 pV = normalize(vViewPosition);
+      vec3 vt = vec3(dot(pV, ptbn[0]), dot(pV, ptbn[1]), dot(pV, ptbn[2]));
+      vt.z = max(vt.z, 0.22);
+      vec2 pddx = dFdx(vMapUv), pddy = dFdy(vMapUv);
+      const int PN = 14;
+      float layer = 1.0 / float(PN);
+      vec2 dUv = vt.xy / vt.z * pFade * layer;
+      vec2 uv = vMapUv;
+      float cur = 0.0;
+      float hgt = 1.0 - (${hgtExpr});
+      vec2 prevUv = uv;
+      float prevH = hgt;
+      for (int i = 0; i < PN; i++) {
+        if (cur >= hgt) break;
+        prevUv = uv;
+        prevH = hgt;
+        uv -= dUv;
+        cur += layer;
+        hgt = 1.0 - (${hgtExpr});
+      }
+      float after = hgt - cur;
+      float before = prevH - (cur - layer);
+      gUv = mix(uv, prevUv, clamp(after / (after - before + 1e-5), 0.0, 1.0));
+    }
+  }`;
+
 // ── Foliage (needles, leaves, ferns, moss, grass) ────────────
 export function foliageMaterial({
   map,
@@ -20,8 +61,10 @@ export function foliageMaterial({
   key = 'a',
   season = 'none',
   lossPerCard = false,
+  roughness = 0.62,
 }) {
-  const mat = new THREE.MeshLambertMaterial({
+  const Mat = OPTS.pbr ? THREE.MeshStandardMaterial : THREE.MeshLambertMaterial;
+  const mat = new Mat({
     map,
     color,
     alphaTest,
@@ -29,6 +72,10 @@ export function foliageMaterial({
     vertexColors,
     alphaToCoverage: a2c,
   });
+  if (OPTS.pbr) {
+    mat.roughness = roughness;
+    mat.metalness = 0;
+  }
   const uTrans = { value: new THREE.Vector3(...trans) };
   const uH = { value: height };
   mat.onBeforeCompile = (sh) => {
@@ -40,7 +87,7 @@ export function foliageMaterial({
     injectFoliage(sh, { power });
     injectSeason(sh, season);
   };
-  mat.customProgramCacheKey = () => `foliage-${wind}-${power}-${key}-${lossPerCard ? 'card' : 'plant'}`;
+  mat.customProgramCacheKey = () => `foliage-${wind}-${power}-${key}-${lossPerCard ? 'card' : 'plant'}-${OPTS.pbr ? 'pbr' : 'lam'}`;
   if (lossPerCard) mat.defines = { LOSS_PER_CARD: '' };
 
   const depth = new THREE.MeshDepthMaterial({ depthPacking: THREE.RGBADepthPacking, map, alphaTest, side });
@@ -73,7 +120,7 @@ export function windDepthMaterial(uH, wind = 'tree') {
 }
 
 // ── Bark: two textures blended by height (e.g. pine: plated foot → orange flaky top) ──
-export function barkMaterial({ texA, texB, mixAt = 2, mixWidth = 0.05, scaleB = [1, 1], height = 20, footMoss = 1, topMoss = 0, normalScale = 1.2, wind = true }) {
+export function barkMaterial({ texA, texB, mixAt = 2, mixWidth = 0.05, scaleB = [1, 1], height = 20, footMoss = 1, topMoss = 0, normalScale = 1.2, wind = true, pom = 0.03, detail = null, uRepeat = 3 }) {
   const mat = new THREE.MeshStandardMaterial({
     map: texA.color,
     normalMap: texA.normal,
@@ -87,13 +134,15 @@ export function barkMaterial({ texA, texB, mixAt = 2, mixWidth = 0.05, scaleB = 
     uNormB: { value: (texB ?? texA).normal },
     uBark: { value: new THREE.Vector4(mixAt, mixWidth, scaleB[0], scaleB[1]) },
     uMoss: { value: new THREE.Vector2(footMoss, topMoss) },
+    uPom: { value: pom },
+    uRepeat: { value: uRepeat },
   };
   mat.onBeforeCompile = (sh) => {
     Object.assign(sh.uniforms, u, { uTime: shared.uTime, uWind: shared.uWind, uTreeH: uH, uSnow: shared.uSnow });
     if (wind) injectWind(sh, 'tree');
     else sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nattribute float aSway;');
     sh.vertexShader = sh.vertexShader
-      .replace('#include <common>', '#include <common>\nattribute float aH;\nvarying float vH;\nvarying float vLY;\nvarying vec3 vWN;')
+      .replace('#include <common>', '#include <common>\nattribute float aH;\nvarying float vH;\nvarying float vLY;\nvarying vec3 vWN;\nvarying float vSeed;')
       .replace(
         '#include <fog_vertex>',
         /* glsl */ `#include <fog_vertex>
@@ -101,41 +150,94 @@ vH = aH;
 vLY = position.y;
 #ifdef USE_INSTANCING
   vWN = normalize(mat3(modelMatrix) * mat3(instanceMatrix) * objectNormal);
+  vec2 bSeedP = instanceMatrix[3].xz;
 #else
   vWN = normalize(mat3(modelMatrix) * objectNormal);
-#endif`,
+  vec2 bSeedP = modelMatrix[3].xz;
+#endif
+vSeed = fract(sin(dot(bSeedP, vec2(12.9898, 78.233))) * 43758.5453);`,
       );
     sh.fragmentShader = sh.fragmentShader
       .replace(
         '#include <common>',
         /* glsl */ `#include <common>
+${HASH_GLSL}
 uniform sampler2D uMapB;
 uniform sampler2D uNormB;
 uniform vec4 uBark;
 uniform vec2 uMoss;
 uniform float uSnow;
+uniform float uPom;
+uniform float uRepeat;
 varying float vH;
 varying float vLY;
 varying vec3 vWN;
+varying float vSeed;
 float bMix = 0.0;
 float bRough = 1.0;
-float bMoss = 0.0;`,
+float bMoss = 0.0;
+vec2 gUv = vec2(0.0);`,
       )
       .replace(
         '#include <map_fragment>',
         /* glsl */ `
 {
-  vec2 uvA = vMapUv;
-  vec2 uvB = vMapUv * uBark.zw;
+  float nz = texture2D(uNormB, vMapUv * vec2(0.37, 0.23)).a;
+  float bAng = fract(vMapUv.x / uRepeat);
+#ifdef BIRCH_DETAIL
+  bMix = smoothstep(uBark.x - uBark.y, uBark.x + uBark.y, vH + (nz - 0.5) * uBark.y * 2.0 + (vSeed - 0.5) * 0.05 + 0.025 * sin(bAng * 12.566 + vSeed * 6.0));
+#else
+  bMix = smoothstep(uBark.x - uBark.y, uBark.x + uBark.y, vH + (nz - 0.5) * uBark.y * 2.0);
+#endif
+  gUv = vMapUv;
+#ifdef USE_POM
+${POM_GLSL('mix(textureGrad(normalMap, uv, pddx, pddy).a, textureGrad(uNormB, uv * uBark.zw, pddx * uBark.zw, pddy * uBark.zw).a, bMix)', 5.0, 13.0)}
+#endif
+  vec2 uvA = gUv;
+  vec2 uvB = gUv * uBark.zw;
   vec4 cA = texture2D(map, uvA);
   vec4 cB = texture2D(uMapB, uvB);
-  float nz = texture2D(uNormB, uvA * vec2(0.37, 0.23)).a;
-  bMix = smoothstep(uBark.x - uBark.y, uBark.x + uBark.y, vH + (nz - 0.5) * uBark.y * 2.0);
   vec4 c = mix(cA, cB, bMix);
   bRough = c.a;
   vec3 wn = normalize(vWN);
   vec3 away = normalize(vec3(${f(-SUN_DIR.x)}, 0.0, ${f(-SUN_DIR.z)}));
   float side = smoothstep(-0.4, 0.8, dot(wn, away));
+#ifdef BIRCH_DETAIL
+  {
+    // the white paper never repeats: a second, offset sample takes over in noise-shaped patches
+    float rep = texture2D(uNormB, vec2(gUv.x * 0.11 + vSeed * 3.0, gUv.y * 0.07 + vSeed)).a;
+    float paper = smoothstep(0.44, 0.56, rep);
+    vec2 uv2 = (gUv * vec2(1.0, 0.83) + vec2(vSeed * 3.17, vSeed * 11.3 + 0.37)) * uBark.zw;
+    vec4 cB2 = texture2D(uMapB, uv2);
+    c = mix(c, mix(cA, cB2, bMix), paper);
+    // scars of lost branches: black diamonds, each tree its own
+    vec2 sc = vec2(bAng * 9.0, vLY * 1.1 + vSeed * 5.0);
+    vec2 cid = floor(sc);
+    vec2 fr = fract(sc) - 0.5;
+    vec3 hr = hash32(cid + vSeed * 13.0);
+    if (hr.x < 0.11) {
+      vec2 q = fr - (hr.yz - 0.5) * 0.4;
+      float dd = abs(q.x) * (1.4 + hr.y) + abs(q.y) * (0.7 + 0.6 * hr.z);
+      float scar = (1.0 - smoothstep(0.2, 0.3, dd)) * bMix;
+      float rim = (smoothstep(0.26, 0.3, dd) - smoothstep(0.3, 0.38, dd)) * bMix;
+      c.rgb = mix(c.rgb, vec3(0.06, 0.055, 0.05), scar);
+      c.rgb = mix(c.rgb, c.rgb * 1.12, rim);
+      bRough = mix(bRough, 0.5, scar);
+    }
+    // lichen crusts, mostly on the shaded side
+    float ln = texture2D(uNormB, vec2(bAng * 5.0 + vSeed, vLY * 0.55 + vSeed * 3.0) * 0.37).a;
+    float lich = smoothstep(0.6, 0.72, ln + (side - 0.5) * 0.12) * bMix * 0.8;
+    c.rgb = mix(c.rgb, vec3(0.60, 0.64, 0.50) * (0.8 + 0.4 * nz), lich);
+    bRough = mix(bRough, 0.95, lich);
+    // faint horizontal banding of the paper, and every tree a slightly different white
+    c.rgb *= 0.95 + 0.07 * texture2D(uNormB, vec2(vSeed * 2.0, vLY * 0.41)).a;
+    c.rgb *= mix(vec3(0.88, 0.9, 0.93), vec3(1.0, 0.97, 0.9), fract(vSeed * 7.31)) * mix(1.0, 1.06, bMix);
+    // soot and algae darken the lower trunk on its shaded side
+    float smudge = texture2D(uNormB, vec2(bAng * 2.0 + vSeed * 4.0, vLY * 0.23) * 0.9).a;
+    smudge = smoothstep(0.45, 0.8, smudge) * (1.0 - smoothstep(1.0, 7.0, vLY)) * (0.35 + 0.65 * side) * bMix;
+    c.rgb = mix(c.rgb, c.rgb * vec3(0.45, 0.47, 0.5), smudge * 0.6);
+  }
+#endif
   float mossTop = smoothstep(0.15, 0.6, wn.y + (nz - 0.5) * 0.8) * uMoss.y;
   bMoss = mossTop;
 #ifdef TREE_BARK
@@ -163,16 +265,20 @@ float bMoss = 0.0;`,
         '#include <normal_fragment_maps>',
         /* glsl */ `
 {
-  vec3 nA = texture2D(normalMap, vNormalMapUv).xyz;
-  vec3 nB = texture2D(uNormB, vNormalMapUv * uBark.zw).xyz;
+  vec3 nA = texture2D(normalMap, gUv).xyz;
+  vec3 nB = texture2D(uNormB, gUv * uBark.zw).xyz;
   vec3 mapN = mix(nA, nB, bMix) * 2.0 - 1.0;
   mapN.xy *= normalScale * (1.0 - 0.7 * bMoss);
   normal = normalize(tbn * mapN);
 }`,
       );
   };
-  mat.customProgramCacheKey = () => `bark-${wind ? 'w' : 's'}`;
-  if (wind) mat.defines = { TREE_BARK: '' };
+  mat.customProgramCacheKey = () => `bark-${wind ? 'w' : 's'}-${OPTS.pom ? 'pom' : 'flat'}-${detail ?? 'plain'}`;
+  const defs = {};
+  if (wind) defs.TREE_BARK = '';
+  if (OPTS.pom) defs.USE_POM = '';
+  if (detail === 'birch') defs.BIRCH_DETAIL = '';
+  mat.defines = defs;
   mat.userData.uH = uH;
   if (wind) mat.userData.depth = windDepthMaterial(uH);
   return mat;
@@ -196,8 +302,10 @@ export function groundMaterial({ moss, litter, noise, eco, ecoRect }) {
     uDew: { value: 1 },
     uSGround: { value: new THREE.Vector3(1, 1, 1) },
     uSLitter: { value: 0 },
+    uPomG: { value: 0.045 },
   };
   mat.userData.uniforms = u;
+  if (OPTS.pom) mat.defines = { USE_POM: '' };
   mat.onBeforeCompile = (sh) => {
     Object.assign(sh.uniforms, u, { uSnow: shared.uSnow });
     sh.vertexShader = sh.vertexShader
@@ -217,6 +325,7 @@ uniform float uDew;
 uniform float uSnow;
 uniform vec3 uSGround;
 uniform float uSLitter;
+uniform float uPomG;
 varying vec3 vWP;
 varying vec3 vGN;
 float gMoss = 1.0;
@@ -232,6 +341,36 @@ vec2 rot2(vec2 p, float a) { float c = cos(a), s = sin(a); return vec2(c * p.x -
   vec2 w = vWP.xz;
   vec4 eco = texture2D(uEco, (w - uEcoRect.xy) / uEcoRect.zw);
   vec4 nz = texture2D(uNoise, w * 0.021);
+#ifdef USE_POM
+  {
+    vec3 pV = normalize(cameraPosition - vWP);
+    float pDist = length(cameraPosition - vWP);
+    float pFade = (1.0 - smoothstep(4.0, 10.0, pDist)) * uPomG;
+    if (pFade > 0.0001 && pV.y > 0.08) {
+      float mB = smoothstep(0.42, 0.58, clamp(eco.r + (nz.r - 0.5) * 0.7, 0.0, 1.0));
+      vec2 pddx = dFdx(w), pddy = dFdy(w);
+      const int PN = 12;
+      float layer = 1.0 / float(PN);
+      vec2 dW = pV.xz / pV.y * pFade * layer;
+      vec2 pw = w;
+      float cur = 0.0;
+      float hgt = 1.0 - mix(textureGrad(uLitN, pw / 1.15, pddx / 1.15, pddy / 1.15).a, textureGrad(uMossN, pw / 1.7, pddx / 1.7, pddy / 1.7).a, mB);
+      vec2 prevW = pw;
+      float prevH = hgt;
+      for (int i = 0; i < PN; i++) {
+        if (cur >= hgt) break;
+        prevW = pw;
+        prevH = hgt;
+        pw -= dW;
+        cur += layer;
+        hgt = 1.0 - mix(textureGrad(uLitN, pw / 1.15, pddx / 1.15, pddy / 1.15).a, textureGrad(uMossN, pw / 1.7, pddx / 1.7, pddy / 1.7).a, mB);
+      }
+      float after = hgt - cur;
+      float before = prevH - (cur - layer);
+      w = mix(pw, prevW, clamp(after / (after - before + 1e-5), 0.0, 1.0));
+    }
+  }
+#endif
   vec4 nz2 = texture2D(uNoise, w * 0.093 + 0.37);
   float bl = smoothstep(0.38, 0.62, nz2.g);
   vec2 m1 = w / 1.7, m2 = rot2(w, 0.61) / 2.3 + 0.5;
@@ -319,7 +458,7 @@ vec2 rot2(vec2 p, float a) { float c = cos(a), s = sin(a); return vec2(c * p.x -
 #endif`,
       );
   };
-  mat.customProgramCacheKey = () => 'ground';
+  mat.customProgramCacheKey = () => `ground-${OPTS.pom ? 'pom' : 'flat'}`;
   return mat;
 }
 

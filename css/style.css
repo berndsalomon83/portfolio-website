@@ -205,6 +205,56 @@ main { position: relative; z-index: 2; }
 .nav__sound:hover,
 .nav__sound[aria-pressed='true'] { color: var(--ink); }
 .nav__sound:focus-visible { outline: 2px solid var(--gold); outline-offset: 4px; border-radius: 6px; }
+/* ── "Just the forest": the yin-yang button fades every word away ── */
+.nav__zen {
+  display: inline-grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--ink-soft);
+  cursor: pointer;
+  transition: color 0.3s, transform 0.8s var(--ease);
+}
+.nav__zen svg { width: 18px; height: 18px; }
+.nav__zen:hover,
+.nav__zen[aria-pressed='true'] { color: var(--ink); }
+.nav__zen[aria-pressed='true'] { transform: rotate(180deg); }
+.nav__zen:focus-visible { outline: 2px solid var(--gold); outline-offset: 4px; border-radius: 50%; }
+main, .gauge, .scrim, .nav__links > a, .season, .nav__sound-label { transition: opacity 1s var(--ease); }
+.zen main, .zen .gauge, .zen .scrim, .zen .nav__links > a, .zen .season, .zen .nav__sound-label, .zen .nav::before { opacity: 0 !important; pointer-events: none; }
+.zen-card {
+  position: fixed;
+  left: 50%;
+  bottom: calc(22px + env(safe-area-inset-bottom));
+  z-index: 15;
+  max-width: min(92vw, 660px);
+  padding: 12px 22px 13px;
+  border-radius: 14px;
+  text-align: center;
+  background: rgba(10, 16, 12, 0.2);
+  border: 1px solid rgba(245, 240, 230, 0.1);
+  backdrop-filter: blur(10px) saturate(110%);
+  -webkit-backdrop-filter: blur(10px) saturate(110%);
+  color: var(--ink-soft);
+  font-size: 0.8rem;
+  letter-spacing: 0.02em;
+  line-height: 1.6;
+  opacity: 0;
+  visibility: hidden;
+  transform: translate(-50%, 14px);
+  transition: opacity 1.2s var(--ease), transform 1.2s var(--ease), visibility 0s linear 1.3s;
+}
+.zen .zen-card { opacity: 1; visibility: visible; transform: translate(-50%, 0); transition-delay: 0.7s, 0.7s, 0s; }
+.zen-card p { margin: 0; }
+.zen-card__name { font-family: var(--serif); font-size: 1.05rem; color: var(--ink); letter-spacing: 0.01em; }
+.zen-card__role { margin-top: 1px; font-size: 0.68rem; letter-spacing: 0.16em; text-transform: uppercase; color: var(--ink-mute); }
+.zen-card__links { display: flex; flex-wrap: wrap; justify-content: center; gap: 2px 10px; margin-top: 6px; }
+.zen-card__links a { color: var(--ink-soft); text-decoration: none; border-bottom: 1px solid rgba(245, 240, 230, 0.16); transition: color 0.3s, border-color 0.3s; }
+.zen-card__links a:hover { color: var(--ink); border-color: rgba(245, 240, 230, 0.5); }
+.zen-card__sep { color: var(--ink-mute); }
 .nav__bars { display: inline-flex; align-items: flex-end; gap: 2px; height: 12px; }
 .nav__bars i { display: block; width: 2px; height: 3px; border-radius: 1px; background: currentColor; transition: height 0.3s; }
 .nav__sound[aria-pressed='true'] .nav__bars i { background: var(--gold); animation: bars 1.1s ease-in-out infinite alternate; }
@@ -381,6 +431,11 @@ main { position: relative; z-index: 2; }
   align-items: center;
   padding: 18vh calc(var(--gutter) + 40px) 18vh var(--gutter);
 }
+
+/* The flyover between Experience and Contact: empty page, the 3D floor is the show. Stable units (no dvh),
+   so the glide doesn't jump when a mobile address bar comes and goes. Collapses on the plain no-WebGL page. */
+.js:not(.no-webgl) .interlude { height: 170vh; height: 170svh; }
+@media (max-width: 760px) { .js:not(.no-webgl) .interlude { height: 140vh; height: 140svh; } }
 
 .eyebrow,
 .kicker {
@@ -891,6 +946,8 @@ a:focus-visible { outline: 2px solid var(--gold); outline-offset: 4px; border-ra
 @media (max-width: 760px) {
   .nav__sound-label { display: none; }
   .nav__links { gap: 11px; }
+  .zen-card { font-size: 0.74rem; padding: 10px 14px; }
+  .zen-card__sep { display: none; }
   .season__name { display: none; }
   .nav .season__panel { top: 66px; right: 16px; width: min(320px, calc(100vw - 32px)); }
   .nav__links a:not(.nav__cta) { font-size: 0.82rem; }

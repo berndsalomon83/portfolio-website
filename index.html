@@ -9,12 +9,12 @@
   <meta property="og:type" content="website" />
   <meta property="og:url" content="https://berndsalomon83.github.io/portfolio-website/" />
   <meta property="og:title" content="Bernd Salomon — Senior Developer &amp; Solution Architect" />
-  <meta property="og:description" content="Hard problems, deep thinking and the will to see it through. Let us build something great together." />
+  <meta property="og:description" content="Hard problems, deep thinking and the will to see it through. Let us build something new together!" />
   <meta property="og:image" content="https://berndsalomon83.github.io/portfolio-website/og-image.jpg" />
   <meta property="og:image:type" content="image/jpeg" />
   <meta property="og:image:width" content="1200" />
   <meta property="og:image:height" content="630" />
-  <meta property="og:image:alt" content="Sunlight breaking through the crowns of a Swedish pine forest, with the name Bernd Salomon and the line: Let us build something great together." />
+  <meta property="og:image:alt" content="Sunlight breaking through the crowns of a Swedish pine forest, with the name Bernd Salomon and the line: Let us build something new together!" />
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:image" content="https://berndsalomon83.github.io/portfolio-website/og-image.jpg" />
   <link rel="canonical" href="https://berndsalomon83.github.io/portfolio-website/" />
@@ -100,6 +100,14 @@
           <button class="season__today" type="button">Back to today</button>
         </div>
       </div>
+      <button class="nav__zen" type="button" aria-pressed="false" aria-label="Let me zone out a little: hide the text" title="Let me zone out a little">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <circle cx="12" cy="12" r="9.5" fill="none" stroke="currentColor" stroke-width="1.5" />
+          <path d="M12 2.5A9.5 9.5 0 0 0 12 21.5A4.75 4.75 0 0 0 12 12A4.75 4.75 0 0 1 12 2.5Z" fill="currentColor" />
+          <circle cx="12" cy="16.75" r="1.4" fill="#0b140e" />
+          <circle cx="12" cy="7.25" r="1.4" fill="currentColor" />
+        </svg>
+      </button>
       <button class="nav__sound" type="button" aria-pressed="false" aria-label="Forest sounds" title="Forest sounds">
         <span class="nav__bars" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
         <span class="nav__sound-label">Sound</span>
@@ -290,13 +298,16 @@
       </div>
     </section>
 
+    <!-- the flyover: an empty stretch while the camera glides low over the forest floor (js/story.js) -->
+    <div class="interlude" aria-hidden="true"></div>
+
     <!-- 04 · CONTACT — the forest floor ──────────────────────── -->
     <section id="contact" class="chapter chapter--contact" data-chapter>
       <div class="finale">
         <p class="kicker kicker--center reveal"><span>04</span> Contact</p>
-        <h2 class="finale__line" aria-label="Let us build something great together.">
+        <h2 class="finale__line" aria-label="Let us build something new together!">
           <span class="w">Let</span> <span class="w">us</span> <span class="w">build</span>
-          <span class="w">something</span> <em class="w">great</em> <span class="w">together.</span>
+          <span class="w">something</span> <em class="w">new</em> <span class="w">together!</span>
         </h2>
         <div class="finale__card glass reveal" style="--d: 7">
           <p class="finale__sub">I'm looking for people who are all in: who'd rather build the best solution than the easy one, and love the work as much as I do. Sound like you? Say hej.</p>
@@ -325,5 +336,18 @@
       </footer>
     </section>
   </main>
+
+  <!-- "Just the forest": while the text is hidden, this quiet card keeps the essentials in reach -->
+  <aside class="zen-card" aria-hidden="true">
+    <p class="zen-card__name">Bernd Salomon</p>
+    <p class="zen-card__role">Senior Developer &amp; Solution Architect · Sweden</p>
+    <p class="zen-card__links">
+      <a data-mail="bernd.salomon.83|gmail.com" data-show></a>
+      <span class="zen-card__sep">·</span>
+      <a data-tel="+46 70|206 39 41"></a>
+      <span class="zen-card__sep">·</span>
+      <a data-tel="+49 176|2099 1360"></a>
+    </p>
+  </aside>
 </body>
 </html>

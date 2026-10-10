@@ -4,11 +4,16 @@ import { RNG } from '../lib/random.js';
 // Hand-"painted" alpha textures for needles, leaves, fronds and moss, drawn with Canvas 2D.
 // Every texture is drawn bottom-up: v = 0 at the bottom edge (stem/base), v = 1 at the top.
 
+let RES = 1;
+let ANISO = 8;
+
+// Every texture is drawn in a fixed coordinate space and rendered at RES× that size.
 function canvas(w, h) {
   const c = document.createElement('canvas');
-  c.width = w;
-  c.height = h;
+  c.width = Math.round(w * RES);
+  c.height = Math.round(h * RES);
   const ctx = c.getContext('2d');
+  ctx.scale(RES, RES);
   ctx.lineCap = 'round';
   ctx.lineJoin = 'round';
   return [c, ctx];
@@ -16,62 +21,58 @@ function canvas(w, h) {
 
 const rgb = (r, g, b, a = 1) => `rgba(${Math.round(r)},${Math.round(g)},${Math.round(b)},${a})`;
 
-// Canvas → DataTexture with colour dilated into transparent texels (no dark halos in mipmaps).
-function toTexture(cv, { anisotropy = 8 } = {}) {
+// Canvas → DataTexture with colour bled into the transparent texels (no dark halos in mipmaps).
+// The bleed uses the browser's own blur, so it stays fast at 2048 px. The texture also carries
+// `userData.alphaAt(u, v)` so dew drops can be placed on real leaf pixels.
+function toTexture(cv, { anisotropy = ANISO } = {}) {
   const w = cv.width;
   const h = cv.height;
-  const src = cv.getContext('2d').getImageData(0, 0, w, h).data;
-  const out = new Uint8Array(w * h * 4);
-  for (let y = 0; y < h; y++) {
-    const sy = h - 1 - y; // flip so canvas top = v 1
-    out.set(src.subarray(sy * w * 4, (sy + 1) * w * 4), y * w * 4);
-  }
-  const filled = new Uint8Array(w * h);
+  const srcImg = cv.getContext('2d').getImageData(0, 0, w, h);
+  const src = srcImg.data;
+  const bc = document.createElement('canvas');
+  bc.width = w;
+  bc.height = h;
+  const bctx = bc.getContext('2d');
+  bctx.filter = `blur(${Math.max(2, Math.round(3 * RES))}px)`;
+  bctx.drawImage(cv, 0, 0);
+  bctx.drawImage(bc, 0, 0);
+  bctx.filter = `blur(${Math.max(4, Math.round(10 * RES))}px)`;
+  bctx.drawImage(bc, 0, 0);
+  bctx.filter = 'none';
+  const blur = bctx.getImageData(0, 0, w, h).data;
   let sr = 0;
   let sg = 0;
   let sb = 0;
   let sn = 0;
-  for (let i = 0; i < w * h; i++) {
-    if (out[i * 4 + 3] > 10) {
-      filled[i] = 1;
-      sr += out[i * 4];
-      sg += out[i * 4 + 1];
-      sb += out[i * 4 + 2];
+  for (let i = 0; i < src.length; i += 4) {
+    if (src[i + 3] > 10) {
+      sr += src[i];
+      sg += src[i + 1];
+      sb += src[i + 2];
       sn++;
     }
   }
   const avg = sn ? [sr / sn, sg / sn, sb / sn] : [80, 100, 60];
-  let frontier = [];
-  for (let pass = 0; pass < 10; pass++) {
-    frontier = [];
-    for (let y = 0; y < h; y++) {
-      for (let x = 0; x < w; x++) {
-        const i = y * w + x;
-        if (filled[i]) continue;
-        let r = 0;
-        let g = 0;
-        let b = 0;
-        let n = 0;
-        if (x > 0 && filled[i - 1] === 1) { r += out[(i - 1) * 4]; g += out[(i - 1) * 4 + 1]; b += out[(i - 1) * 4 + 2]; n++; }
-        if (x < w - 1 && filled[i + 1] === 1) { r += out[(i + 1) * 4]; g += out[(i + 1) * 4 + 1]; b += out[(i + 1) * 4 + 2]; n++; }
-        if (y > 0 && filled[i - w] === 1) { r += out[(i - w) * 4]; g += out[(i - w) * 4 + 1]; b += out[(i - w) * 4 + 2]; n++; }
-        if (y < h - 1 && filled[i + w] === 1) { r += out[(i + w) * 4]; g += out[(i + w) * 4 + 1]; b += out[(i + w) * 4 + 2]; n++; }
-        if (n) frontier.push(i, r / n, g / n, b / n);
+  const out = new Uint8Array(w * h * 4);
+  for (let y = 0; y < h; y++) {
+    const sy = h - 1 - y; // flip so canvas top = v 1
+    const row = y * w * 4;
+    out.set(src.subarray(sy * w * 4, (sy + 1) * w * 4), row);
+    for (let x = 0; x < w; x++) {
+      const i = row + x * 4;
+      const a = out[i + 3];
+      if (a >= 250) continue;
+      const j = (sy * w + x) * 4;
+      if (blur[j + 3] > 2) {
+        const t = a / 255;
+        out[i] = blur[j] + (out[i] - blur[j]) * t;
+        out[i + 1] = blur[j + 1] + (out[i + 1] - blur[j + 1]) * t;
+        out[i + 2] = blur[j + 2] + (out[i + 2] - blur[j + 2]) * t;
+      } else if (a === 0) {
+        out[i] = avg[0];
+        out[i + 1] = avg[1];
+        out[i + 2] = avg[2];
       }
-    }
-    for (let k = 0; k < frontier.length; k += 4) {
-      const i = frontier[k];
-      out[i * 4] = frontier[k + 1];
-      out[i * 4 + 1] = frontier[k + 2];
-      out[i * 4 + 2] = frontier[k + 3];
-      filled[i] = 1;
-    }
-  }
-  for (let i = 0; i < w * h; i++) {
-    if (!filled[i]) {
-      out[i * 4] = avg[0];
-      out[i * 4 + 1] = avg[1];
-      out[i * 4 + 2] = avg[2];
     }
   }
   const tex = new THREE.DataTexture(out, w, h, THREE.RGBAFormat);
@@ -81,6 +82,11 @@ function toTexture(cv, { anisotropy = 8 } = {}) {
   tex.magFilter = THREE.LinearFilter;
   tex.anisotropy = anisotropy;
   tex.needsUpdate = true;
+  tex.userData.alphaAt = (u, v) => {
+    const x = Math.min(w - 1, Math.max(0, Math.floor(u * w)));
+    const y = Math.min(h - 1, Math.max(0, Math.floor(v * h)));
+    return out[(y * w + x) * 4 + 3] / 255;
+  };
   return tex;
 }
 
@@ -373,6 +379,22 @@ function birchTwig(seed) {
     ctx.lineTo(ex, ey);
     ctx.stroke();
     drawLeaf(ctx, rng, ex, ey, l.ang, l.len, l.len * 0.42 * fore, base, birchProfile, 0.12, 6);
+  }
+  return toTexture(cv);
+}
+
+// Fallen birch leaves, yellow to brown, for the litter that gathers under the birches.
+function birchLitter(seed) {
+  const S = 256;
+  const [cv, ctx] = canvas(S, S);
+  const rng = new RNG(seed);
+  for (let i = 0; i < 6; i++) {
+    const x = S * rng.float(0.2, 0.8);
+    const y = S * rng.float(0.3, 0.92);
+    const len = rng.float(62, 92);
+    const pick = rng.next();
+    const base = pick < 0.45 ? [198, 150, 42] : pick < 0.75 ? [160, 98, 32] : [112, 72, 34];
+    drawLeaf(ctx, rng, x, y, rng.float(0, 6.28), len, len * 0.46, base, birchProfile, 0.1, 5);
   }
   return toTexture(cv);
 }
@@ -670,18 +692,21 @@ function woodEnd() {
   return toTexture(cv);
 }
 
-export function createFoliageTextures() {
+export function createFoliageTextures({ res = 1, anisotropy = 8 } = {}) {
+  RES = res;
+  ANISO = anisotropy;
   return {
-    pine: [pineAtlas(11), pineAtlas(23)],
-    spruce: [spruceSpray(31), spruceSpray(47)],
+    pine: [pineAtlas(11), pineAtlas(23), pineAtlas(37)],
+    spruce: [spruceSpray(31), spruceSpray(47), spruceSpray(59)],
     spruceComb: spruceComb(53),
-    birch: [birchTwig(61), birchTwig(73)],
+    birch: [birchTwig(61), birchTwig(73), birchTwig(89)],
     oak: oakLeaf(),
     fern: [fernFrond(81), fernFrond(97)],
     blueberry: blueberry(101),
     lingon: lingon(113),
     moss: featherMoss(127),
     lichen: beardLichen(131),
+    litter: birchLitter(137),
     woodEnd: woodEnd(),
   };
 }

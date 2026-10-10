@@ -18,6 +18,7 @@ const upNormal = (k = 0.6) => (p, face) => {
 
 function shrub(rng, w, h, cards = 4) {
   const md = new MeshData();
+  md.cards = [];
   const a0 = rng.float(0, Math.PI);
   for (let i = 0; i < cards; i++) {
     const a = a0 + (i / cards) * Math.PI + rng.float(-0.2, 0.2);
@@ -25,14 +26,42 @@ function shrub(rng, w, h, cards = 4) {
     const up = v3(rng.float(-0.12, 0.12), 1, rng.float(-0.12, 0.12)).normalize();
     const off = v3(rng.float(-0.05, 0.05), -0.02, rng.float(-0.05, 0.05));
     const t = rng.float(0.62, 1.0);
-    addCard(md, off, up, right, w * rng.float(0.85, 1.15), h * rng.float(0.85, 1.15), {
+    const cw = w * rng.float(0.85, 1.15);
+    const ch = h * rng.float(0.85, 1.15);
+    addCard(md, off, up, right, cw, ch, {
       color: [t, t, t * 0.95],
       normal: upNormal(0.55),
       swayFn: (cy) => cy,
       h: 1,
     });
+    md.cards.push({ base: off, up, right, w: cw, h: ch, normal: v3().crossVectors(right, up).normalize() });
   }
   return md;
+}
+
+// Dew drops sitting on real leaf pixels of the instanced shrubs within `radius` of `center`.
+function shrubDew(rng, mesh, cards, alphaAt, center, radius, perCard = 3) {
+  const out = [];
+  if (!mesh || !alphaAt) return out;
+  const m = new THREE.Matrix4();
+  const p = v3();
+  const pos = v3();
+  for (let i = 0; i < mesh.count; i++) {
+    mesh.getMatrixAt(i, m);
+    pos.setFromMatrixPosition(m);
+    if (Math.hypot(pos.x - center.x, pos.z - center.y) > radius) continue;
+    for (const c of cards) {
+      for (let k = 0; k < perCard; k++) {
+        const u = rng.next();
+        const v = rng.next();
+        if (alphaAt(u, v) < 0.6) continue;
+        p.copy(c.base).addScaledVector(c.right, (u - 0.5) * c.w).addScaledVector(c.up, v * c.h).addScaledVector(c.normal, 0.003);
+        p.applyMatrix4(m);
+        out.push([p.x, p.y, p.z, rng.float(0.0008, 0.0019)]);
+      }
+    }
+  }
+  return out;
 }
 
 function fern(rng) {
@@ -118,6 +147,13 @@ function grassTuft(rng) {
   return md;
 }
 
+// A single leaf-litter card lying flat on the ground.
+function litterCard() {
+  const md = new MeshData();
+  addCard(md, v3(0, 0.004, 0.11), v3(0, 0, -1), v3(1, 0, 0), 0.22, 0.22, { color: [1, 1, 1], normal: () => UP, sway: 0, h: 0 });
+  return md;
+}
+
 function mossTuft(rng) {
   const md = new MeshData();
   const a0 = rng.float(0, Math.PI);
@@ -183,8 +219,12 @@ export function buildPlants({ foliage, trees, eco, quality }) {
     const e = eco.ecoAt(x, z);
     return 0.15 + e.berry * 0.85 + e.moss * 0.2;
   });
+  const dewTargets = [];
   for (let v = 0; v < 2; v++) {
-    add(instanced(shrub(rng, 0.42, 0.34, 4), berryMat, berryPts.filter((_, i) => i % 2 === v), rng, { scale: [0.75, 1.25], castShadow: false }));
+    const md = shrub(rng, 0.42, 0.34, 4);
+    const m = instanced(md, berryMat, berryPts.filter((_, i) => i % 2 === v), rng, { scale: [0.75, 1.25], castShadow: false });
+    add(m);
+    if (m) dewTargets.push([m, md.cards, foliage.blueberry]);
   }
 
   // ── lingon ──
@@ -196,7 +236,12 @@ export function buildPlants({ foliage, trees, eco, quality }) {
   });
   // a few lingon plants right beside the sapling for colour
   for (const [dx, dz] of [[0.55, 0.35], [-0.5, 0.25], [0.35, -0.55], [-0.75, -0.3], [0.9, -0.1]]) lingPts.push([S.x + dx, S.y + dz, 0.9]);
-  add(instanced(shrub(rng, 0.26, 0.2, 3), lingMat, lingPts, rng, { scale: [0.75, 1.2] }));
+  {
+    const md = shrub(rng, 0.26, 0.2, 3);
+    const m = instanced(md, lingMat, lingPts, rng, { scale: [0.75, 1.2] });
+    add(m);
+    if (m) dewTargets.push([m, md.cards, foliage.lingon]);
+  }
 
   // ── ferns ──
   const fernMats = foliage.fern.map((map, i) => foliageMaterial({ map, wind: 'plant', height: 0.6, trans: [0.7, 0.8, 0.28], power: 3, key: `fern${i}`, season: 'fern' }));
@@ -237,5 +282,29 @@ export function buildPlants({ foliage, trees, eco, quality }) {
   );
   add(instanced(mossTuft(rng), mossMat, mossPts, rng, { scale: [0.7, 1.5], sink: 0.012, tilt: 0.25, followNormal: 0.8 }));
 
-  return { group, mossPoints: mossPts, grassPoints: grassPts };
+  // ── fallen birch leaves, thickest under the birches ──
+  const litterMat = foliageMaterial({ map: foliage.litter, wind: 'plant', height: 0.05, trans: [0.35, 0.3, 0.1], key: 'litter' });
+  const birches = trees.filter((t) => t.species === 'birch' || t.species === 'youngBirch');
+  const birchNear = (x, z) => {
+    let w = 0;
+    for (const b of birches) {
+      const d2 = (b.x - x) ** 2 + (b.z - z) ** 2;
+      if (d2 < 36) w += (b.species === 'birch' ? 1 : 0.4) * Math.exp(-d2 / 14);
+    }
+    return Math.min(1, w);
+  };
+  const litterPts = scatterNearPath(rng, Math.round(3600 * k), 9, (x, z) => {
+    if (nearTrunk(x, z, 0.1) || dS(x, z) < 0.3 || distToCameraEnd(x, z) < 0.35) return false;
+    return 0.06 + 0.94 * birchNear(x, z);
+  });
+  add(instanced(litterCard(), litterMat, litterPts, rng, { scale: [0.7, 1.3], sink: 0, tilt: 0.2, followNormal: 1.0 }));
+
+  // ── dew on the leaves of the shrubs the camera ends up among ──
+  const leafDew = [];
+  if (quality.leafDew) {
+    const center = new THREE.Vector2(S.x, S.y + 0.4);
+    for (const [mesh, cards, tex] of dewTargets) leafDew.push(...shrubDew(rng, mesh, cards, tex.userData.alphaAt, center, 3.4, 3));
+  }
+
+  return { group, mossPoints: mossPts, grassPoints: grassPts, leafDew };
 }

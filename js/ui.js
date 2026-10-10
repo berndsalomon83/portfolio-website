@@ -126,6 +126,61 @@ export function initUI() {
     sound.hidden = true;
   }
 
+  // "Just the forest": hide every word and drift slowly through the walk; a quiet card keeps the essentials.
+  const zen = document.querySelector('.nav__zen');
+  if (zen) {
+    const card = document.querySelector('.zen-card');
+    const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    let on = false;
+    let lastInput = 0;
+    let dir = 1;
+    let acc = 0;
+    let prev = 0;
+    let raf = 0;
+    const drift = (now) => {
+      if (!on) return;
+      raf = requestAnimationFrame(drift);
+      const dt = Math.min(0.1, (now - prev) / 1000);
+      prev = now;
+      // any scroll, touch or key pauses the drift for a while
+      if (reduced || now - lastInput < 8000) return;
+      const max = document.documentElement.scrollHeight - innerHeight;
+      if (max <= 0) return;
+      // the whole walk takes about four minutes, then it turns around
+      acc += (max / 240) * dt * dir;
+      const step = Math.trunc(acc);
+      if (step !== 0) {
+        window.scrollBy({ top: step, behavior: 'instant' });
+        acc -= step;
+      }
+      if (scrollY >= max - 1 && dir > 0) dir = -1;
+      if (scrollY <= 1 && dir < 0) dir = 1;
+    };
+    const input = () => {
+      lastInput = performance.now();
+    };
+    const setZen = (v) => {
+      on = v;
+      root.classList.toggle('zen', on);
+      zen.setAttribute('aria-pressed', String(on));
+      zen.setAttribute('aria-label', on ? 'Bring back the text' : 'Let me zone out a little: hide the text');
+      zen.title = on ? 'Bring back the text' : 'Let me zone out a little';
+      if (card) card.setAttribute('aria-hidden', String(!on));
+      cancelAnimationFrame(raf);
+      if (on) {
+        lastInput = performance.now() - 5000;
+        prev = performance.now();
+        raf = requestAnimationFrame(drift);
+      }
+    };
+    for (const ev of ['wheel', 'touchstart', 'keydown', 'pointerdown']) addEventListener(ev, input, { passive: true });
+    zen.addEventListener('click', () => setZen(!on));
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && on) setZen(false);
+    });
+    if (new URLSearchParams(location.search).has('zen')) setZen(true);
+  }
+
   const onScroll = () => root.classList.toggle('is-scrolled', scrollY > innerHeight * 0.6);
   addEventListener('scroll', onScroll, { passive: true });
   onScroll();

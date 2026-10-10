@@ -93,7 +93,7 @@ export function addTube(md, pts, radii, o = {}) {
       const r = radii[i] * (o.radiusMod ? o.radiusMod(i, a, p) : 1);
       md.pos.push(p.x + dx * r, p.y + dy * r, p.z + dz * r);
       md.nor.push(dx, dy, dz);
-      md.uv.push((j / radial) * uRep, acc);
+      md.uv.push((j / radial) * uRep + (o.uShift ? o.uShift(i, p) : 0), acc);
       md.col.push(c[0], c[1], c[2]);
       md.sway.push(sw);
       md.h.push(hh);

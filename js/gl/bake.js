@@ -99,12 +99,19 @@ Surf birchBark(vec2 uv) {
   float band = pfbm(vec2(uv.x * 3.0, uv.y * 56.0) + 4.0, vec2(3.0, 56.0), 3);
   vec3 col = mix(vec3(0.84, 0.83, 0.80), vec3(0.95, 0.93, 0.90), n * 0.6 + 0.5);
   col = mix(col, vec3(0.90, 0.79, 0.71), smoothstep(0.15, 0.55, band) * 0.35);
-  vec2 rep = vec2(5.0, 64.0);
+  vec2 rep = vec2(4.0, 72.0);
   vec3 c = pworley(uv * rep + vec2(n * 0.8, 0.0), rep, 0.9);
-  float len = smoothstep(0.42, 0.18, c.x) * step(0.45, c.z);
-  col = mix(col, vec3(0.22, 0.19, 0.17), len * 0.85);
+  float dens = smoothstep(0.15, 0.75, pfbm(uv * vec2(2.0, 7.0) + 21.0, vec2(2.0, 7.0), 3) * 0.5 + 0.5);
+  float len = smoothstep(0.5, 0.2, c.x) * step(0.55 - 0.3 * dens, c.z);
+  vec2 rep2 = vec2(2.0, 110.0);
+  vec3 c2l = pworley(uv * rep2 + vec2(n * 0.5, 3.0), rep2, 0.9);
+  float len2 = smoothstep(0.42, 0.12, c2l.x) * step(0.72, c2l.z);
+  len = max(len, len2);
+  col = mix(col, vec3(0.17, 0.14, 0.13), len * 0.92);
+  float grime = smoothstep(0.3, 0.7, pfbm(uv * vec2(3.0, 4.0) + 13.0, vec2(3.0, 4.0), 4) * 0.5 + 0.5);
+  col = mix(col, col * vec3(0.78, 0.78, 0.76), grime * 0.35);
   float blk = pfbm(uv * vec2(3.0, 5.0) + 9.0, vec2(3.0, 5.0), 6);
-  float blkM = smoothstep(0.28, 0.34, blk);
+  float blkM = smoothstep(0.38, 0.44, blk);
   vec3 c2 = pworley(uv * vec2(6.0, 20.0), vec2(6.0, 20.0), 0.9);
   float crk = (1.0 - smoothstep(0.0, 0.1, c2.y - c2.x)) * smoothstep(0.15, 0.3, blk);
   col = mix(col, vec3(0.10, 0.09, 0.085), max(blkM, crk));
@@ -255,7 +262,7 @@ void main() {
 `;
 
 export class Baker {
-  constructor(renderer) {
+  constructor(renderer, anisotropy = 8) {
     this.renderer = renderer;
     this.material = new THREE.ShaderMaterial({
       uniforms: {
@@ -272,7 +279,7 @@ export class Baker {
     this.mesh = new THREE.Mesh(fullscreenTriangle(), this.material);
     this.mesh.frustumCulled = false;
     this.camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
-    this.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy());
+    this.anisotropy = Math.min(anisotropy, renderer.capabilities.getMaxAnisotropy());
   }
 
   target(w, h, srgb) {

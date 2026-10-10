@@ -77,7 +77,10 @@ const f = (x) => x.toFixed(5);
 
 // Height fog with forward scattering toward the sun, replacing three's built-in fog.
 // Uses scene.fog (FogExp2): colour = ambient haze, density = base density at ground level.
-export function installFog({ falloff = 0.07, sunGlow = [0.55, 0.42, 0.26] } = {}) {
+// On top lies a ground mist: much denser close to the ground, pooling in the hollows (steep height falloff,
+// integrated exactly along the view ray) and gathered in banks between the trunks (noise sampled at a few
+// points along the ray), whiter than the haze. The far distance turns slightly cooler (aerial perspective).
+export function installFog({ falloff = 0.07, sunGlow = [0.55, 0.42, 0.26], mist = 1.6, mistK = 0.55, mistBase = 1.0, mistTaps = 2 } = {}) {
   THREE.ShaderChunk.fog_pars_vertex = /* glsl */ `
 #ifdef USE_FOG
   varying float vFogDepth;
@@ -97,6 +100,13 @@ export function installFog({ falloff = 0.07, sunGlow = [0.55, 0.42, 0.26] } = {}
   varying vec3 vFogWorldPos;
   #ifdef FOG_EXP2
     uniform float fogDensity;
+    float fMistHash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+    float fMistNoise(vec2 p) {
+      vec2 i = floor(p);
+      vec2 u = fract(p);
+      u = u * u * (3.0 - 2.0 * u);
+      return mix(mix(fMistHash(i), fMistHash(i + vec2(1.0, 0.0)), u.x), mix(fMistHash(i + vec2(0.0, 1.0)), fMistHash(i + vec2(1.0, 1.0)), u.x), u.y);
+    }
   #else
     uniform float fogNear;
     uniform float fogFar;
@@ -113,12 +123,25 @@ export function installFog({ falloff = 0.07, sunGlow = [0.55, 0.42, 0.26] } = {}
     float fT = ${f(falloff)} * fRay.y;
     float fLine = abs(fT) > 1e-3 ? (1.0 - exp(-fT)) / fT : 1.0 - 0.5 * fT;
     float fOD = fogDensity * exp(-${f(falloff)} * cameraPosition.y) * fDist * fLine;
-    float fogFactor = 1.0 - exp(-fOD);
+    float mT = ${f(mistK)} * fRay.y;
+    float mLine = abs(mT) > 1e-3 ? (1.0 - exp(-mT)) / mT : 1.0 - 0.5 * mT;
+    float mOD = fogDensity * ${f(mist)} * exp(-${f(mistK)} * (cameraPosition.y - ${f(mistBase)})) * fDist * mLine;
+    float mBank = 0.0;
+    for (int k = 0; k < ${mistTaps}; k++) {
+      vec2 q = cameraPosition.xz + fDir.xz * min(fDist, 48.0) * (float(k) + 0.6) / ${mistTaps}.0;
+      mBank += fMistNoise(q * 0.16) * 0.65 + fMistNoise(q * 0.43 + 7.1) * 0.35;
+    }
+    mOD *= mix(0.15, 1.85, smoothstep(0.25, 0.75, mBank / ${mistTaps}.0));
+    float fogFactor = 1.0 - exp(-(fOD + mOD));
+    float mShare = mOD / max(fOD + mOD, 1e-5);
   #else
     float fogFactor = smoothstep(fogNear, fogFar, vFogDepth);
+    float mShare = 0.0;
   #endif
   float fSun = pow(max(dot(fDir, vec3(${f(SUN_DIR.x)}, ${f(SUN_DIR.y)}, ${f(SUN_DIR.z)})), 0.0), 5.0);
   vec3 fCol = fogColor * (1.0 + vec3(${sunGlow.map(f).join(', ')}) * fSun * 4.0);
+  fCol = mix(fCol, fCol * 1.1 + 0.012, mShare);
+  fCol *= mix(vec3(1.0), vec3(0.93, 0.98, 1.07), smoothstep(12.0, 70.0, fDist));
   gl_FragColor.rgb = mix(gl_FragColor.rgb, fCol, fogFactor);
 }
 #endif`;

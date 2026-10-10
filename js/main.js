@@ -33,13 +33,14 @@ async function boot() {
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.NoToneMapping;
   renderer.shadowMap.enabled = quality.shadows;
-  renderer.shadowMap.type = params.has('softshadow') ? THREE.PCFSoftShadowMap : THREE.PCFShadowMap;
+  renderer.shadowMap.type = quality.softShadows || params.has('softshadow') ? THREE.PCFSoftShadowMap : THREE.PCFShadowMap;
   renderer.shadowMap.autoUpdate = false;
 
   const world = await createWorld(renderer, quality, ui.progress);
   const pipeline = new Pipeline(renderer, world, quality);
   const story = new Story(ui.chapters);
-  const seasons = new SeasonState(params.has('season') ? Number(params.get('season')) : seasonFromDate());
+  const seasonParam = params.get('season');
+  const seasons = new SeasonState(seasonParam === null ? 1.5 : seasonParam === 'today' ? seasonFromDate() : Number(seasonParam));
   ui.bindSeasons(seasons);
   // season-adjusted look for this frame
   const seasonLook = (l, sp) => {
@@ -83,7 +84,7 @@ async function boot() {
   ui.progress(0.88, 'Letting the light in');
   let time = 0;
   story.applyCamera(world.camera, time);
-  world.applySeason(seasons.update(0));
+  world.applySeason(seasons.update(0), seasons.value);
   let look = seasonLook(story.look(), seasons.params);
   world.update(0, time, look);
   renderer.shadowMap.needsUpdate = true;
@@ -133,14 +134,14 @@ async function boot() {
     story.update(dt);
     story.applyCamera(world.camera, time);
     const sp = seasons.update(dt);
-    world.applySeason(sp);
+    world.applySeason(sp, seasons.value);
     look = seasonLook(story.look(), sp);
     story.height = look.height;
     look.fade = fade * fade * (3 - 2 * fade);
     if (window.forest?.override) Object.assign(look, window.forest.override);
     world.update(dt, time, look);
 
-    renderer.shadowMap.needsUpdate = frame % shadowEvery === 0;
+    renderer.shadowMap.needsUpdate = frame % shadowEvery === 0 || (look.fly ?? 0) > 0;
     pipeline.render(look, time);
     ui.gauge(story);
     frame++;

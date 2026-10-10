@@ -10,6 +10,13 @@ import { SAPLING, FOREST_RADIUS, distToPath } from './layout.js';
 
 const UP = new THREE.Vector3(0, 1, 0);
 const v3 = (x = 0, y = 0, z = 0) => new THREE.Vector3(x, y, z);
+
+// Tessellation of the trees nearest the walk (1 = the original budget).
+let DETAIL = 1;
+export function setTreeDetail(d) {
+  DETAIL = d;
+}
+const seg = (n) => Math.max(3, Math.round(n * DETAIL));
 const deg = THREE.MathUtils.degToRad;
 const lerp = THREE.MathUtils.lerp;
 const clamp = THREE.MathUtils.clamp;
@@ -105,7 +112,7 @@ export function buildPine(seed, near) {
     const t = clamp(Math.max(0, y) / H, 0, 1);
     return Math.max(0.028, r0 * Math.pow(1 - t, 0.72)) * (1 + 0.5 * Math.exp(-Math.max(y + 0.2, 0) / 0.35));
   };
-  const rings = near ? 30 : 9;
+  const rings = near ? seg(30) : 9;
   const tp = [];
   const tr = [];
   for (let i = 0; i <= rings; i++) {
@@ -114,7 +121,7 @@ export function buildPine(seed, near) {
     tr.push(trunkR(y));
   }
   addTube(bark, tp, tr, {
-    radial: near ? 14 : 6,
+    radial: near ? seg(14) : 6,
     uRepeat: near ? 3 : 2,
     vScale: 1.2,
     h: (i, p) => Math.max(0, p.y) / H,
@@ -188,7 +195,7 @@ export function buildPine(seed, near) {
     const rb = clamp(trunkR(y) * 0.5 * Math.sqrt(L / Lmax), 0.016, 0.075);
     if (near || L > 1.4) {
       addTube(bark, bpts, bpts.map((_, i) => rb * (1 - (0.8 * i) / segs) + 0.004), {
-        radial: near ? 5 : 3,
+        radial: near ? seg(6) : 3,
         vScale: 0.6,
         h: () => 0.95,
         sway: (i, p) => swayAt(p),
@@ -255,7 +262,7 @@ export function buildSpruce(seed, near, young = false) {
     const t = clamp(Math.max(0, y) / H, 0, 1);
     return Math.max(0.02, r0 * Math.pow(1 - t, 0.95)) * (1 + 0.42 * Math.exp(-Math.max(y + 0.2, 0) / 0.3));
   };
-  const rings = near ? 28 : 8;
+  const rings = near ? seg(28) : 8;
   const tp = [];
   const tr = [];
   for (let i = 0; i <= rings; i++) {
@@ -264,7 +271,7 @@ export function buildSpruce(seed, near, young = false) {
     tr.push(trunkR(y));
   }
   addTube(bark, tp, tr, {
-    radial: near ? 12 : 6,
+    radial: near ? seg(12) : 6,
     uRepeat: near ? 3 : 2,
     vScale: 1.2,
     h: (i, p) => Math.max(0, p.y) / H,
@@ -380,37 +387,151 @@ export function buildSpruce(seed, near, young = false) {
 }
 
 // ─────────────────────────────────────────────────────────────
-// Silver birch (white trunk, ascending limbs, weeping twigs of small leaves)
+// Silver birch (white trunk, ascending limbs, weeping twigs of small leaves).
+// Old trunks are not tubes: slightly oval and bumpy, they bulge where limbs grow out, often fork
+// into two stems and twist their grain a little on the way up.
 // ─────────────────────────────────────────────────────────────
-export function buildBirch(seed, near) {
+const aFromAz = (az) => Math.atan2(-Math.cos(az), -Math.sin(az));
+const smooth01 = (t) => (t <= 0 ? 0 : t >= 1 ? 1 : t * t * (3 - 2 * t));
+
+export function buildBirch(seed, near, young = false) {
   const rng = new RNG(seed);
   const bark = new MeshData();
   const leaves = new MeshData();
-  const H = rng.float(14, 19);
-  const r0 = rng.float(0.11, 0.16);
-  const crownStart = H * rng.float(0.42, 0.55);
-  const at = makeSpine(rng, H, 0.14, rng.float(0.4, 1.3));
+  const H = young ? rng.float(2.6, 6.5) : rng.float(15, 21);
+  const r0 = young ? Math.max(0.016, H * 0.011) : rng.float(0.15, 0.24);
+  const crownStart = young ? H * rng.float(0.25, 0.4) : H * rng.float(0.42, 0.55);
+  const at = makeSpine(rng, H, young ? 0.06 : 0.14, young ? rng.float(0.1, 0.5) : rng.float(0.4, 1.3));
   const trunkR = (y) => {
     const t = clamp(Math.max(0, y) / H, 0, 1);
     return Math.max(0.018, r0 * Math.pow(1 - t, 0.85)) * (1 + 0.35 * Math.exp(-Math.max(y + 0.2, 0) / 0.3));
   };
-  const rings = near ? 26 : 8;
+
+  // ── a fork into two stems on many of the old trees ──
+  const forked = near && !young && rng.chance(0.42);
+  const yFork = forked ? H * rng.float(0.2, 0.42) : Infinity;
+  const forkAz = rng.float(0, 6.28);
+  const forkTan = Math.tan(rng.float(0.18, 0.34));
+  const H2 = forked ? yFork + (H - yFork) * rng.float(0.78, 0.95) : 0;
+  const forkBase = forked ? at(yFork) : null;
+  const w2 = [rng.float(0, 6.28), rng.float(0, 6.28)];
+  const at2 = (y) => {
+    const t = Math.max(0, y - yFork);
+    const spread = forkTan * t * (1 - (0.35 * t) / Math.max(1, H2 - yFork));
+    return v3(
+      forkBase.x + Math.cos(forkAz) * spread + Math.sin(t * 0.9 + w2[0]) * 0.06,
+      y,
+      forkBase.z + Math.sin(forkAz) * spread + Math.cos(t * 0.7 + w2[1]) * 0.06,
+    );
+  };
+  const r2 = (y) => {
+    const t = clamp((y - yFork) / Math.max(0.01, H2 - yFork), 0, 1);
+    return Math.max(0.016, trunkR(yFork) * 0.8 * Math.pow(1 - t, 0.85));
+  };
+  // above the fork the main stem thins a little and leans away from its twin
+  const mainAt = (y) => {
+    const p = at(y);
+    if (forked && y > yFork) {
+      const t = y - yFork;
+      const lean = 0.11 * t * smooth01(t / 1.5);
+      p.x -= Math.cos(forkAz) * lean;
+      p.z -= Math.sin(forkAz) * lean;
+    }
+    return p;
+  };
+  const mainR = (y) => trunkR(y) * (forked && y > yFork ? 0.86 : 1);
+
+  // ── the limbs are decided first, so the trunk can bulge where they grow out ──
+  const nPrim = young ? rng.int(6, 10) : near ? rng.int(11, 16) : 8;
+  const prims = [];
+  for (let k = 0; k < nPrim; k++) {
+    const t = (k + rng.float(0.1, 0.9)) / nPrim;
+    const y = crownStart + (H * 0.97 - crownStart) * t;
+    const az = k * 2.39996 + rng.float(-0.4, 0.4);
+    const L = young ? rng.float(0.6, 1.5) * (1 - 0.4 * t) : rng.float(2.6, 4.4) * (1 - 0.55 * t);
+    const el = deg(lerp(young ? 25 : 40, young ? 55 : 68, t) + rng.float(-8, 8));
+    prims.push({ stem: 0, y, az, L, el });
+  }
+  if (forked) {
+    const n2 = Math.round(nPrim * 0.7);
+    const c2 = Math.max(yFork + 1.5, crownStart * 0.9);
+    for (let k = 0; k < n2; k++) {
+      const t = (k + rng.float(0.1, 0.9)) / n2;
+      const y = c2 + (H2 * 0.97 - c2) * t;
+      const az = k * 2.39996 + rng.float(-0.4, 0.4) + 1.3;
+      prims.push({ stem: 1, y, az, L: rng.float(2.0, 3.4) * (1 - 0.55 * t), el: deg(lerp(40, 68, t) + rng.float(-8, 8)) });
+    }
+  }
+
+  // ── trunk: oval, bumpy, collars under the limbs, a slow twist of the grain ──
+  const flare = near && !young ? rootMod(rng, 0.25, 0.25) : null;
+  const ph = [rng.float(0, 6.28), rng.float(0, 6.28), rng.float(0, 6.28), rng.float(0, 6.28)];
+  const collars = (stem) => prims.filter((b) => b.stem === stem).map((b) => ({ y: b.y, a: aFromAz(b.az), k: 0.1 + 0.08 * Math.min(1, b.L / 4) }));
+  const bodyMod = (cols, amount) => (i, a, p) => {
+    let m = 1 + amount * (0.07 * Math.cos(2 * a + ph[0] + p.y * 0.25) + 0.05 * Math.sin(3 * a + ph[1] + p.y * 0.8) * Math.sin(p.y * 1.3 + ph[2]) + 0.03 * Math.sin(5 * a + p.y * 2.1 + ph[3]));
+    for (const c of cols) {
+      const dy = (p.y - c.y) / 0.45;
+      if (Math.abs(dy) < 2.5) m += c.k * Math.exp(-dy * dy) * Math.pow(Math.max(0, Math.cos(a - c.a)), 3);
+    }
+    if (flare) m *= flare(i, a, p);
+    return m;
+  };
+  const twist = (i, p) => (young ? 0 : 0.12 * Math.sin(p.y * 0.33 + ph[3]) + 0.05 * Math.sin(p.y * 1.1 + ph[0]));
+  const rings = near ? seg(26) : 8;
   const tp = [];
   const tr = [];
   for (let i = 0; i <= rings; i++) {
     const y = -0.4 + (H + 0.4) * Math.pow(i / rings, 1.3);
-    tp.push(at(y));
-    tr.push(trunkR(y));
+    tp.push(mainAt(y));
+    tr.push(mainR(y));
   }
   addTube(bark, tp, tr, {
-    radial: near ? 12 : 6,
-    uRepeat: 2,
-    vScale: 1.2,
+    radial: near ? (young ? seg(8) : seg(14)) : 6,
+    uRepeat: young ? 1 : 3,
+    vScale: young ? 0.6 : 1.2,
     h: (i, p) => Math.max(0, p.y) / H,
-    radiusMod: near ? rootMod(rng, 0.25, 0.25) : undefined,
+    radiusMod: near ? bodyMod(collars(0), young ? 0.4 : 1) : undefined,
+    uShift: near ? twist : undefined,
   });
+  if (forked) {
+    const n2 = Math.max(6, Math.round(rings * 0.6));
+    const tp2 = [];
+    const tr2 = [];
+    for (let i = 0; i <= n2; i++) {
+      const y = yFork + (H2 - yFork) * Math.pow(i / n2, 1.2);
+      tp2.push(at2(y));
+      tr2.push(r2(y));
+    }
+    // the first ring sits inside the main trunk so the fork closes without a gap
+    tp2[0] = at(yFork - 0.35);
+    tr2[0] = trunkR(yFork - 0.35) * 0.8;
+    addTube(bark, tp2, tr2, {
+      radial: seg(12),
+      uRepeat: 3,
+      vScale: 1.2,
+      vOffset: yFork / 1.2,
+      h: (i, p) => Math.max(0, p.y) / H,
+      radiusMod: bodyMod(collars(1), 0.8),
+      uShift: twist,
+    });
+  }
 
-  const crownC = at(crownStart + (H - crownStart) * 0.55);
+  // ── tinder fungus (fnöskticka) brackets on some of the old trunks ──
+  if (near && !young && rng.chance(0.6)) {
+    const n = rng.int(1, 3);
+    for (let i = 0; i < n; i++) {
+      const y = rng.float(0.5, 2.6);
+      const az = rng.float(0, 6.28);
+      const d = v3(Math.cos(az), 0, Math.sin(az));
+      const p0 = mainAt(y).addScaledVector(d, mainR(y) * 0.75);
+      const w = rng.float(0.07, 0.14);
+      const pts = [p0, p0.clone().addScaledVector(d, w * 0.4).add(v3(0, w * 0.06, 0)), p0.clone().addScaledVector(d, w * 0.8).add(v3(0, w * 0.03, 0)), p0.clone().addScaledVector(d, w)];
+      addTube(bark, pts, [w * 0.75, w * 0.72, w * 0.5, 0.008], { radial: 10, vScale: 0.3, h: () => 0.0, radiusMod: (k, a) => 1 - 0.62 * Math.abs(Math.sin(a)) });
+    }
+  }
+
+  // ── crown ──
+  const crownC = mainAt(crownStart + (H - crownStart) * 0.55);
   const swayAt = (p) => clamp(Math.hypot(p.x - crownC.x, p.z - crownC.z) / 3, 0, 1);
   const nf = crownNormal(crownC, 0.7, 1.2);
   const hangCard = (p, scale) => {
@@ -430,35 +551,32 @@ export function buildBirch(seed, near) {
     });
   };
 
-  const nPrim = near ? rng.int(10, 15) : 8;
-  for (let k = 0; k < nPrim; k++) {
-    const t = (k + rng.float(0.1, 0.9)) / nPrim;
-    const y = crownStart + (H * 0.97 - crownStart) * t;
-    const az = k * 2.39996 + rng.float(-0.4, 0.4);
-    const L = rng.float(2.6, 4.2) * (1 - 0.55 * t);
-    const el = deg(lerp(40, 68, t) + rng.float(-8, 8));
+  for (const b of prims) {
+    const atF = b.stem === 1 ? at2 : mainAt;
+    const rF = b.stem === 1 ? r2 : mainR;
+    const { y, az, L, el } = b;
     const dir = v3(Math.cos(el) * Math.cos(az), Math.sin(el), Math.cos(el) * Math.sin(az));
-    const start = at(y).addScaledVector(v3(dir.x, 0, dir.z).normalize(), trunkR(y) * 0.3);
+    const start = atF(y).addScaledVector(v3(dir.x, 0, dir.z).normalize(), rF(y) * 0.3);
     const segs = near ? 6 : 3;
     const bpts = branchPath(start, dir, L, segs, (d, s) => {
       d.y -= 0.05 + 0.2 * s * s;
       d.x += rng.float(-0.1, 0.1);
       d.z += rng.float(-0.1, 0.1);
     });
-    const rb = clamp(trunkR(y) * 0.45, 0.012, 0.05);
+    const rb = clamp(rF(y) * 0.45, 0.012, 0.05);
     addTube(bark, bpts, bpts.map((_, i) => rb * (1 - (0.8 * i) / segs) + 0.003), {
-      radial: near ? 5 : 3,
+      radial: near ? seg(6) : 3,
       vScale: 0.6,
       h: () => 0.5,
       sway: (i, p) => swayAt(p),
     });
-    const sc = near ? 1 : 1.7;
-    for (let u = 0.35; u <= 1.0; u += (near ? 0.3 : 0.6) / L) {
+    const sc = young ? 0.5 : near ? 1 : 1.7;
+    for (let u = 0.35; u <= 1.0; u += (young ? 0.18 : near ? 0.2 : 0.5) / L) {
       hangCard(along(bpts, u), sc);
-      if (near && rng.chance(0.5)) hangCard(along(bpts, u).add(v3(rng.float(-0.2, 0.2), 0.05, rng.float(-0.2, 0.2))), sc * 0.85);
+      if (near && rng.chance(0.7)) hangCard(along(bpts, u).add(v3(rng.float(-0.2, 0.2), 0.05, rng.float(-0.2, 0.2))), sc * 0.85);
     }
-    if (near) {
-      const nSec = rng.int(2, 4);
+    if (near && !young) {
+      const nSec = rng.int(3, 5);
       for (let s = 0; s < nSec; s++) {
         const bp = along(bpts, rng.float(0.3, 0.8));
         const sd = rotY(v3(dir.x, 0.25, dir.z).normalize(), rng.sign() * rng.float(0.5, 1.1));
@@ -524,6 +642,16 @@ export function placeTrees(quality) {
     ['spruce', S.x + 4.8, S.y + 0.2, 1.0],
     ['pine', S.x - 2.6, S.y + 3.6, 1.0],
     ['spruce', S.x - 4.2, S.y - 3.2, 1.05],
+    // silver birches close to the walk: white trunks converging overhead, leaves glowing in the sun
+    ['birch', -1.6, 5.4, 1.3],
+    ['birch', 1.4, 0.2, 1.2],
+    ['birch', -2.5, -2.3, 1.2],
+    ['birch', 2.9, -5.6, 1.25],
+    ['birch', -1.4, -11.0, 1.15],
+    ['birch', 3.4, -9.6, 1.2],
+    ['birch', S.x + 3.2, S.y + 3.4, 1.15],
+    ['birch', S.x - 2.6, S.y + 1.6, 1.1],
+    ['birch', S.x + 0.6, S.y - 4.6, 1.2],
   ];
   for (const [sp, x, z, s] of manual) add(sp, x, z, s);
 
@@ -537,7 +665,8 @@ export function placeTrees(quality) {
     const z = Math.sin(a) * r - 6;
     const stand = fbm2(x * 0.028 + 5, z * 0.028 - 2, 3);
     let sp = stand > 0.16 ? 'spruce' : 'pine';
-    if (rng.chance(stand < -0.1 ? 0.2 : 0.08)) sp = 'birch';
+    const dpath = distToPath(x, z);
+    if (rng.chance(dpath < 14 ? 0.42 : stand < -0.1 ? 0.35 : 0.18)) sp = 'birch';
     const minD = { pine: 3.0, spruce: 3.3, birch: 2.6 }[sp];
     const dp = distToPath(x, z);
     if (dp < (sp === 'spruce' ? 4.6 : 2.1)) continue;
@@ -560,6 +689,22 @@ export function placeTrees(quality) {
     if (tooClose(x, z, 1.9)) continue;
     add('young', x, z, rng.float(0.8, 1.2));
   }
+
+  // young birches along the walk: thin white stems and fresh leaves at eye level
+  const youngBirchTarget = trees.length + Math.round(quality.trees * 0.17);
+  attempts = 0;
+  while (trees.length < youngBirchTarget && attempts < 40000) {
+    attempts++;
+    const r = 32 * Math.sqrt(rng.next());
+    const a = rng.next() * Math.PI * 2;
+    const x = Math.cos(a) * r;
+    const z = Math.sin(a) * r - 6;
+    const dp = distToPath(x, z);
+    if (dp < 2.4 || dp > 17) continue;
+    if (Math.hypot(x - S.x, z - S.y) < 3.2) continue;
+    if (tooClose(x, z, 1.5)) continue;
+    add('youngBirch', x, z, rng.float(0.8, 1.2));
+  }
   return trees;
 }
 
@@ -569,10 +714,11 @@ export function placeTrees(quality) {
 export function buildForest({ trees, surfaces, foliage, quality }) {
   const group = new THREE.Group();
   group.name = 'forest';
+  setTreeDetail(quality.detail ?? 1);
 
-  const pineBark = barkMaterial({ texA: surfaces.pineLower, texB: surfaces.pineUpper, mixAt: 0.52, mixWidth: 0.07, scaleB: [0.6, 1.4], height: 22 });
-  const spruceBark = barkMaterial({ texA: surfaces.spruce, texB: surfaces.spruce, mixAt: 2, height: 21 });
-  const birchBark = barkMaterial({ texA: surfaces.birchBase, texB: surfaces.birch, mixAt: 0.07, mixWidth: 0.035, scaleB: [1, 1], height: 16, footMoss: 0.6 });
+  const pineBark = barkMaterial({ texA: surfaces.pineLower, texB: surfaces.pineUpper, mixAt: 0.52, mixWidth: 0.07, scaleB: [0.6, 1.4], height: 22, pom: 0.045 });
+  const spruceBark = barkMaterial({ texA: surfaces.spruce, texB: surfaces.spruce, mixAt: 2, height: 21, pom: 0.03 });
+  const birchBark = barkMaterial({ texA: surfaces.birchBase, texB: surfaces.birch, mixAt: 0.07, mixWidth: 0.035, scaleB: [1, 1], height: 16, footMoss: 0.6, pom: 0.014, detail: 'birch', uRepeat: 3 });
 
   const pineLeaf = foliage.pine.map((map, i) => foliageMaterial({ map, height: 22, trans: [0.9, 0.85, 0.45], key: `pine${i}`, season: 'conifer' }));
   const spruceLeaf = foliage.spruce.map((map, i) => foliageMaterial({ map, height: 21, trans: [0.65, 0.8, 0.35], key: `spruce${i}`, season: 'conifer' }));
@@ -581,10 +727,11 @@ export function buildForest({ trees, surfaces, foliage, quality }) {
   const birchLeaf = foliage.birch.map((map, i) => foliageMaterial({ map, height: 16, trans: [1.25, 1.1, 0.35], power: 3, key: `birch${i}`, season: 'birch', lossPerCard: true }));
 
   const variants = {
-    pine: { near: quality.tier === 'low' ? 2 : 4, far: 2, build: buildPine, bark: pineBark, leaf: (i) => pineLeaf[i % 2] },
-    spruce: { near: quality.tier === 'low' ? 2 : 3, far: 2, build: buildSpruce, bark: spruceBark, leaf: (i) => spruceLeaf[i % 2] },
-    birch: { near: 2, far: 1, build: buildBirch, bark: birchBark, leaf: (i) => birchLeaf[i % 2] },
-    young: { near: quality.tier === 'low' ? 2 : 3, far: 2, build: (seed, near) => buildSpruce(seed, near, true), bark: spruceBark, leaf: (i) => spruceLeaf[(i + 1) % 2] },
+    pine: { near: quality.tier === 'low' ? 2 : 4, far: 2, build: buildPine, bark: pineBark, leaf: (i) => pineLeaf[i % pineLeaf.length] },
+    spruce: { near: quality.tier === 'low' ? 2 : 3, far: 2, build: buildSpruce, bark: spruceBark, leaf: (i) => spruceLeaf[i % spruceLeaf.length] },
+    birch: { near: quality.tier === 'low' ? 2 : 3, far: 1, build: buildBirch, bark: birchBark, leaf: (i) => birchLeaf[i % birchLeaf.length] },
+    young: { near: quality.tier === 'low' ? 2 : 3, far: 2, build: (seed, near) => buildSpruce(seed, near, true), bark: spruceBark, leaf: (i) => spruceLeaf[(i + 1) % spruceLeaf.length] },
+    youngBirch: { near: quality.tier === 'low' ? 2 : 3, far: 1, build: (seed, near) => buildBirch(seed, near, true), bark: birchBark, leaf: (i) => birchLeaf[(i + 1) % birchLeaf.length] },
   };
 
   const stats = { instances: 0, triangles: 0 };

@@ -245,6 +245,78 @@ export function buildProps({ surfaces, foliage, trees, quality }) {
     group.add(r);
   }
 
+  // ── surface roots of the trees nearest the walk ──
+  {
+    const coniferMd = new MeshData();
+    const birchMd = new MeshData();
+    const hosts = trees.filter((t) => t.near && t.species !== 'young' && t.species !== 'youngBirch' && distToPath(t.x, t.z) < 9);
+    for (const t of hosts) {
+      const md = t.species === 'birch' ? birchMd : coniferMd;
+      const r0 = (t.species === 'spruce' ? 0.23 : t.species === 'birch' ? 0.19 : 0.2) * t.scale;
+      const n = rng.int(3, 6);
+      const a0 = rng.float(0, 6.28);
+      for (let i = 0; i < n; i++) {
+        const az = a0 + (i / n) * 6.283 + rng.float(-0.35, 0.35);
+        const dir = v3(Math.cos(az), 0, Math.sin(az));
+        const L = rng.float(0.7, 2.2) * t.scale;
+        const pts = [];
+        const rad = [];
+        const segs = 6;
+        for (let k = 0; k <= segs; k++) {
+          const s = k / segs;
+          const wob = rng.float(-0.08, 0.08) * s;
+          const px = t.x + dir.x * (r0 * 0.6 + L * s) + wob;
+          const pz = t.z + dir.z * (r0 * 0.6 + L * s) - wob;
+          const rr = (0.07 + 0.05 * (r0 / 0.2)) * (1 - 0.8 * s) + 0.015;
+          const lift = rr * (0.55 - 0.95 * s);
+          pts.push(v3(px, heightAt(px, pz) + lift, pz));
+          rad.push(rr * (1 + 0.15 * Math.sin(s * 9 + az)));
+        }
+        addTube(md, pts, rad, { radial: 7, uRepeat: 1, vScale: 0.5, h: () => 0.02, radiusMod: (k, a) => 1 - 0.3 * Math.abs(Math.sin(a)) });
+      }
+    }
+    const rootMatC = barkMaterial({ texA: surfaces.pineLower, texB: surfaces.spruce, mixAt: 2, footMoss: 1, topMoss: 0.5, wind: false, normalScale: 1.3 });
+    const rootMatB = barkMaterial({ texA: surfaces.birchBase, texB: surfaces.birch, mixAt: 2, footMoss: 1, topMoss: 0.4, wind: false });
+    for (const [md, mat] of [[coniferMd, rootMatC], [birchMd, rootMatB]]) {
+      if (!md.count) continue;
+      const m = new THREE.Mesh(md.build(), mat);
+      m.castShadow = shadows;
+      m.receiveShadow = shadows;
+      group.add(m);
+    }
+  }
+
+  // ── snags: dead pines with the bark gone and the tops broken off ──
+  {
+    const md = new MeshData();
+    const spots = [[-5.6, -4.6, 11], [6.4, -13.8, 9], [-4.6, 11.0, 13], [7.5, 2.5, 10]];
+    for (const [x, z, H] of spots) {
+      if (nearTrunk(x, z, 1.0)) continue;
+      const y0 = heightAt(x, z) - 0.3;
+      const pts = [];
+      const rad = [];
+      const rings = 12;
+      const lean = [rng.float(-0.04, 0.04), rng.float(-0.04, 0.04)];
+      for (let i = 0; i <= rings; i++) {
+        const t = i / rings;
+        pts.push(v3(x + lean[0] * H * t * t, y0 + H * t, z + lean[1] * H * t * t));
+        rad.push(Math.max(0.05, 0.24 * Math.pow(1 - t, 0.8)) * (1 + 0.5 * Math.exp((-t * H) / 0.4)));
+      }
+      addTube(md, pts, rad, { radial: 12, uRepeat: 2, vScale: 1.5, h: () => 0.5, radiusMod: (i, a, p) => 1 + (p.y - y0 > H - 0.5 ? 0.5 * Math.abs(Math.sin(a * 3)) : 0) });
+      for (let k = 0; k < 7; k++) {
+        const t = rng.float(0.3, 0.95);
+        const p0 = pts[Math.floor(t * rings)];
+        const az = rng.float(0, 6.28);
+        const d = v3(Math.cos(az), rng.float(-0.2, 0.3), Math.sin(az)).normalize();
+        addTube(md, [p0.clone(), p0.clone().addScaledVector(d, rng.float(0.2, 0.7))], [0.04, 0.012], { radial: 4, vScale: 0.5, h: () => 0.5 });
+      }
+    }
+    const snag = new THREE.Mesh(md.build(), barkMaterial({ texA: surfaces.deadwood, texB: surfaces.deadwood, mixAt: 2, footMoss: 0.3, topMoss: 0.1, wind: false, normalScale: 1.5 }));
+    snag.castShadow = shadows;
+    snag.receiveShadow = shadows;
+    group.add(snag);
+  }
+
   // ── fallen logs (half bark, half grey deadwood, moss on top) ──
   const logMat = barkMaterial({ texA: surfaces.spruce, texB: surfaces.deadwood, mixAt: 0.5, mixWidth: 0.25, footMoss: 0, topMoss: 1, wind: false, normalScale: 1.4 });
   const capMat = new THREE.MeshStandardMaterial({ map: foliage.woodEnd, roughness: 0.9 });
@@ -305,7 +377,7 @@ export function buildProps({ surfaces, foliage, trees, quality }) {
 
   // ── dead twigs and fallen branches ──
   const twigMd = new MeshData();
-  const twigPts = scatterNearPath(rng, Math.round(90 * quality.plants + 20), 6, (x, z) => distToCameraEnd(x, z) > 0.6 && distToSightline(x, z) > 0.15);
+  const twigPts = scatterNearPath(rng, Math.round(220 * quality.plants + 30), 6, (x, z) => distToCameraEnd(x, z) > 0.6 && distToSightline(x, z) > 0.15);
   for (const [dx, dz] of [[0.5, 0.9], [-0.4, 1.3], [0.9, 0.2]]) twigPts.push([S.x + dx, S.y + dz]);
   for (const [x, z] of twigPts) {
     const L = rng.float(0.25, 1.3);
@@ -338,7 +410,7 @@ export function buildProps({ surfaces, foliage, trees, quality }) {
 
   // ── pine cones ──
   const coneMat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.85 });
-  const conePts = scatterNearPath(rng, Math.round(420 * quality.plants + 60), 5, (x, z) => (nearTrunk(x, z, 4) ? 1 : 0.25) * (distToCameraEnd(x, z) > 0.4 ? 1 : 0));
+  const conePts = scatterNearPath(rng, Math.round(650 * quality.plants + 80), 5, (x, z) => (nearTrunk(x, z, 4) ? 1 : 0.25) * (distToCameraEnd(x, z) > 0.4 ? 1 : 0));
   for (const [dx, dz] of [[0.25, 0.75], [-0.3, 0.55], [0.15, 1.2], [-0.6, 1.0]]) conePts.push([S.x + dx, S.y + dz]);
   const cones = new THREE.InstancedMesh(coneGeometry(), coneMat, conePts.length);
   const dmy = new THREE.Object3D();
@@ -352,6 +424,50 @@ export function buildProps({ surfaces, foliage, trees, quality }) {
   cones.castShadow = shadows;
   cones.receiveShadow = shadows;
   group.add(cones);
+
+  // ── pebbles and small stones ──
+  {
+    const variants = [0, 1, 2].map((i) => rockGeometry(300 + i, 8, v3(1, 0.7, 0.9)));
+    const pts = scatterNearPath(rng, Math.round(170 * quality.plants + 40), 6, (x, z) => !nearTrunk(x, z, 0.3) && distToCameraEnd(x, z) > 0.5 && distToSightline(x, z) > 0.2);
+    for (let v = 0; v < 3; v++) {
+      const list = pts.filter((_, i) => i % 3 === v);
+      if (!list.length) continue;
+      const mesh = new THREE.InstancedMesh(variants[v], v === 1 ? rockMatMossy : rockMat, list.length);
+      list.forEach(([x, z], i) => {
+        const sc = rng.float(0.03, 0.11);
+        dmy.position.set(x, heightAt(x, z) - sc * 0.3, z);
+        dmy.rotation.set(rng.float(-0.3, 0.3), rng.float(0, 6.28), rng.float(-0.3, 0.3));
+        dmy.scale.set(sc * rng.float(0.8, 1.5), sc * rng.float(0.5, 0.9), sc * rng.float(0.8, 1.3));
+        dmy.updateMatrix();
+        mesh.setMatrixAt(i, dmy.matrix);
+      });
+      mesh.castShadow = shadows;
+      mesh.receiveShadow = shadows;
+      group.add(mesh);
+    }
+  }
+
+  // ── boletes (karljohan): fat pale stems under brown caps ──
+  {
+    const bCap = new THREE.MeshStandardMaterial({ color: new THREE.Color(0.36, 0.17, 0.06), roughness: 0.45 });
+    const bStem = new THREE.MeshStandardMaterial({ color: new THREE.Color(0.78, 0.7, 0.52), roughness: 0.85 });
+    const spots = [[S.x - 0.9, S.y + 1.25, 1.0], [S.x - 1.05, S.y + 1.4, 0.7], [S.x + 1.3, S.y + 0.95, 0.9], [2.0, -9.6, 1.1], [1.9, -9.45, 0.75], [-0.3, -5.2, 1.0], [2.6, -3.4, 0.9]];
+    for (const [x, z, sc] of spots) {
+      const H = 0.075;
+      const stem = new THREE.Mesh(lathe([[0.0001, 0], [0.028, 0], [0.03, H * 0.3], [0.024, H * 0.75], [0.02, H], [0.0001, H]], 24), bStem);
+      const cap = new THREE.Mesh(lathe([[0.0001, H * 0.85], [0.04, H * 0.85], [0.052, H * 0.95], [0.05, H * 1.1], [0.036, H * 1.3], [0.015, H * 1.42], [0.0001, H * 1.45]], 32), bCap);
+      const g = new THREE.Group();
+      g.add(stem, cap);
+      g.position.set(x, heightAt(x, z) - 0.008, z);
+      g.rotation.set(rng.float(-0.1, 0.1), rng.float(0, 6), rng.float(-0.1, 0.1));
+      g.scale.setScalar(sc);
+      for (const m of g.children) {
+        m.castShadow = shadows;
+        m.receiveShadow = shadows;
+      }
+      group.add(g);
+    }
+  }
 
   // ── mushrooms: kantareller in the moss, a pair of flugsvampar by the boulder ──
   const chantMat = new THREE.MeshStandardMaterial({ color: new THREE.Color(0.72, 0.34, 0.025), roughness: 0.6 });
