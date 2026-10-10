@@ -18,9 +18,12 @@ Then open http://localhost:5173. Any static server works too, e.g. `npx serve` o
 
 ## Deploy
 
-There is no build step. Upload the folder as-is to any static host: GitHub Pages, Netlify, Vercel, Cloudflare Pages or your own server. three.js is loaded from the jsDelivr CDN through the import map in `index.html`.
+There is no build step. Upload the folder as-is to any static host: GitHub Pages, Netlify, Vercel, Cloudflare Pages or your own server.
 
-To host three.js yourself, download `three.module.js` (v0.169.0) and point the import map at your copy.
+Everything is served from the site itself, so visitors' browsers contact no third party (no Google Fonts, no CDN). That keeps the privacy policy short and avoids the German Google-Fonts warning letters:
+
+- three.js v0.169.0 (MIT): `vendor/three/three.module.min.js`, wired up through the import map in `index.html`
+- Fraunces, Inter and La Belle Aurore (SIL Open Font License): `fonts/`, declared in `css/fonts.css`
 
 ## Editing the content
 
@@ -32,7 +35,9 @@ All text lives in **`index.html`**:
 | 01 · About | Personal story, facts (home, focus, how and where I work, languages, status) and the three "How I can help" offerings |
 | 02 · Work | Four project cards: title, text, tags, organisation |
 | 03 · Experience | Career timeline and the grouped toolkit chips |
-| 04 · Contact | E-mail, phone numbers, the Say hej / GitHub / LinkedIn buttons and a prepared CV button. To publish a CV, put `Bernd-Salomon-CV.pdf` next to `index.html` and remove `hidden` from its button |
+| 04 · Contact | E-mail, phone numbers and the Say hej / GitHub / LinkedIn / CV buttons. The CV is `Bernd-Salomon-CV.pdf`; replace that file to update it |
+| `impressum.html` | Legal notice (provider, register, VAT). Company details still marked `TODO(AB details)` |
+| `privacy.html` | Privacy policy: hosting (GitHub Pages), contact by e-mail/phone, rights. Update the hosting section if the site moves (e.g. to Cloudflare) |
 
 E-mail addresses (`data-mail="user|domain"`) and phone numbers (`data-tel="prefix|rest"`) in the contact chapter are assembled by `js/ui.js`, so simple scrapers can't harvest them from the HTML. The page `<title>`, meta description and Open Graph tags are at the top of `index.html`.
 
@@ -59,7 +64,7 @@ E-mail addresses (`data-mail="user|domain"`) and phone numbers (`data-tel="prefi
 - **Light**: one sun with a shadow map that follows the camera. The shadow map is ray-marched to produce real light shafts through the canopy, and a screen-space pass adds the rays that break through the crowns around the sun. Height fog scatters warmly toward the sun.
 - **Scroll** maps each chapter to a camera keyframe. Exposure, haze, depth of field and the sapling's growth are blended along the way.
 - **Performance**: the 3D layer renders at a fixed pixel budget for each quality tier (the HTML stays sharp), and the resolution adapts automatically if frames get slow. Medium quality runs at about 10–15 ms per frame at 1280×800 on an AMD Radeon 890M integrated GPU.
-- **Accessibility**: all content is real HTML. The canvas is decorative (`aria-hidden`), `prefers-reduced-motion` is respected, and without WebGL 2, or when three.js can't be loaded from the CDN (e.g. behind a strict firewall), the page falls back to a static gradient with all content visible.
+- **Accessibility**: all content is real HTML. The canvas is decorative (`aria-hidden`), `prefers-reduced-motion` is respected, and without WebGL 2, or when the 3D scripts can't be loaded, the page falls back to a static gradient with all content visible.
 
 ## Share preview
 

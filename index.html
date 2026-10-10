@@ -20,15 +20,13 @@
   <link rel="canonical" href="https://berndsalomon83.github.io/portfolio-website/" />
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230b140e'/%3E%3Cpath d='M32 52V30' stroke='%23b9cc8e' stroke-width='3' stroke-linecap='round'/%3E%3Cpath d='M32 34c-9 0-14-6-14-14 9 0 14 6 14 14zM32 30c0-9 6-15 15-15 0 9-6 15-15 15z' fill='%23b9cc8e'/%3E%3C/svg%3E" />
 
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..600;1,9..144,300..600&family=Inter:wght@300..600&display=swap" rel="stylesheet" />
-  <link href="https://fonts.googleapis.com/css2?family=La+Belle+Aurore&display=swap&text=Built%20togehwiClaud" rel="stylesheet" />
+  <!-- Fonts and three.js are served from this site itself: visitors' browsers contact no third party. -->
+  <link rel="stylesheet" href="css/fonts.css" />
   <link rel="stylesheet" href="css/style.css" />
 
   <script>
     document.documentElement.classList.replace('no-js', 'js');
-    // If the forest's scripts can't load at all (e.g. a firewall blocks the CDN), show the plain page.
+    // If the forest's scripts can't load at all, show the plain page instead of a stuck loader.
     window.forestFallback = function () {
       var run = function () {
         document.documentElement.classList.add('no-webgl');
@@ -53,7 +51,7 @@
     };
   </script>
   <script type="importmap">
-    { "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js" } }
+    { "imports": { "three": "./vendor/three/three.module.min.js" } }
   </script>
   <script type="module" src="js/main.js" onerror="forestFallback()"></script>
 </head>
@@ -313,13 +311,16 @@
             <a class="btn btn--primary" href="#contact" data-mail="bernd.salomon.83|gmail.com">Say hej <span aria-hidden="true">→</span></a>
             <a class="btn" href="https://github.com/berndsalomon83" target="_blank" rel="noopener">GitHub</a>
             <a class="btn" href="https://www.linkedin.com/in/bernd-salomon-44ab58305/" target="_blank" rel="noopener">LinkedIn</a>
-            <!-- CV: put Bernd-Salomon-CV.pdf next to index.html, then remove "hidden" -->
-            <a class="btn" href="Bernd-Salomon-CV.pdf" target="_blank" rel="noopener" aria-label="CV (PDF)" hidden>CV</a>
+            <a class="btn" href="Bernd-Salomon-CV.pdf" target="_blank" rel="noopener" aria-label="CV (PDF, German)" title="CV (PDF, German)">CV</a>
           </div>
         </div>
       </div>
       <footer class="footer">
-        <span>© <span id="year">2026</span> Bernd Salomon</span>
+        <span class="footer__legal">
+          <span>© <span id="year">2026</span> Bernd Salomon</span>
+          <a href="impressum.html">Impressum</a>
+          <a href="privacy.html">Privacy</a>
+        </span>
         <span class="signature">Built together with Claude</span>
       </footer>
     </section>

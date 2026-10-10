@@ -813,8 +813,12 @@ main { position: relative; z-index: 2; }
   color: var(--ink-mute);
   align-items: center;
 }
+.footer__legal { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 16px; }
+.footer__legal a { color: var(--ink-soft); text-decoration: none; border-bottom: 1px solid var(--line); transition: color 0.3s, border-color 0.3s; }
+.footer__legal a:hover { color: var(--gold); border-color: var(--gold); }
 /* Signed by hand: the line writes itself in when the forest floor comes into view. */
 .signature {
+  margin-left: auto;
   padding: 2px 4px 4px;
   font-family: 'La Belle Aurore', var(--serif);
   font-size: 1.4em; /* thin strokes and a small lowercase: this is what looks as big as the © line */
@@ -916,6 +920,9 @@ a:focus-visible { outline: 2px solid var(--gold); outline-offset: 4px; border-ra
   .about__body .facts div { flex-direction: column; gap: 3px; padding: 10px 0; }
   .about__body .facts dt { font-size: 0.8rem; }
   .about__body .facts dd { text-align: left; }
+  /* four buttons don't fit one row: "Say hej" goes full width, the others share the row below */
+  .finale__actions .btn { flex: 1 1 0; justify-content: center; }
+  .finale__actions .btn--primary { flex-basis: 100%; }
 }
 
 @media (prefers-reduced-motion: reduce) {
