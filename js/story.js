@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { heightAt } from './world/terrain.js';
 import { SAPLING } from './world/layout.js';
-import { FLY, PATCH, SPOTS, toPatch, heroHeightAt } from './world/flyover/config.js';
+import { FLY, PATCH, SPOTS, toPatch, fromPatch, heroHeightAt } from './world/flyover/config.js';
 
 // Scroll → story position s ∈ [0, 4] (one unit per chapter) → camera pose and the "look" of the frame.
 // Between Experience (3) and Contact (4) the page has an empty interlude: the camera tips straight down,
@@ -33,7 +33,12 @@ export const FLYCAM = {
   fallback: [3.35, 3.75], // glide range in s when the page layout can't tell
   edge: [0.1, 0.98], // glide starts with the last 10 % of the Experience cards on screen, ends as the Contact text arrives
   tipStart: 0.05, // tilt in: the nose starts to go down after this fraction of the way, gently, while the cards are read …
-  tipInto: 0.2, // … and settles straight down this fraction into the glide, so it never swings round in a few wheel notches
+  tipInto: 0.3, // … and settles straight down this fraction into the glide, so it never swings round in a few wheel notches
+  // tip-down (the same span as the pitch, into the glide): over [from, to] of it the camera dives to `low` m in front of
+  // the lucky fly agarics and runs past just under their caps, slid `side` m toward them (deepest at `peak`), then climbs
+  // back to the glide height. Its gaze and focus turn onto them earlier, over [from, lookTo] (strongest at lookPeak),
+  // and let go before the camera passes them, so it never whips round; the turn sideways (yaw) is the gentler one.
+  shroom: { from: 0.3, to: 1, peak: 0.55, low: 0.32, side: 0.14, lookTo: 0.95, lookPeak: 0.45, pitch: 0.6, yaw: 0.5 },
   ends: 0.4, // glide: the speed dips this much at either end (0 = constant, 1 = stop) …
   endLen: 0.2, // … over this fraction of the glide
   lift: 0.06, // rise: the camera climbs this much (m) before it settles at the seedling
@@ -109,16 +114,32 @@ function glideProgress(t) {
   const F = (x) => (x >= q ? q / 2 : x - q * ((x / q) ** 3 - (x / q) ** 4 / 2));
   return (t - a * F(t) - a * (q / 2 - F(1 - t))) / (1 - a * q);
 }
-// The nose going down: one gentle curve over the tilt in and the start of the glide (−90° from there on).
-function tipPitch(s, sA, sB) {
+// The tip-down's span: the tilt in and the start of the glide. → [t 0 … 1, its length in s]
+function tipSpan(s, sA, sB) {
   const d = sA - 3 + FLYCAM.tipInto * (sB - sA);
-  const t = clamp01((s - 3) / d);
+  return [clamp01((s - 3) / d), d];
+}
+// The nose going down: one gentle curve over that span (−90° from there on).
+function tipPitch(s, sA, sB) {
+  const [t, d] = tipSpan(s, sA, sB);
   return shaped(CAM[3].pitch, slope3('pitch'), -90, 0, t, d, sstep(FLYCAM.tipStart, 1, t));
 }
 const glideEndRate = () => (1 - FLYCAM.ends) / (1 - FLYCAM.ends * FLYCAM.endLen); // d(progress)/dt at either end
 
 // The gaze lifts early in the rise, so the seedling is in view while it grows (flat at both ends).
 const revealCurve = (t) => ease(t) + FLYCAM.reveal * t * t * (1 - t) * (1 - t);
+
+// The fly agarics' caps (world), and the dive in front of them: 0 → 1 → 0 over FLYCAM.shroom's span, flat at both ends.
+const SHROOM = (() => {
+  const s = SPOTS.flyAgaric;
+  if (!s) return null;
+  const { x, z } = fromPatch(s.u, s.v);
+  return { x, y: heroHeightAt(x, z) + 0.1, z };
+})();
+function bump(t, from, to, peak) {
+  const x = clamp01((t - from) / (to - from));
+  return Math.sin(Math.PI * x ** (Math.log(0.5) / Math.log(peak))) ** 2;
+}
 
 // 0 … 1, how much the camera looks straight down (1 during the glide).
 const flyOf = (pitch) => sstep(20, 88, -pitch);
@@ -138,7 +159,7 @@ function legacyPose(s, aspect, saplingY, out) {
     yaw += (f.yaw - yaw) * w;
     pitch += (f.pitch - pitch) * w;
   }
-  return Object.assign(out, { x, y, z, eye, yaw, pitch, fov, fly: 0 });
+  return Object.assign(out, { x, y, z, eye, yaw, pitch, fov, fly: 0, shroomW: 0, shroomD: 0 });
 }
 
 // final approach: frame the sapling in the lower third whatever the terrain does
@@ -182,6 +203,9 @@ export function storyPose(s, { aspect = 16 / 9, flyRange = FLYCAM.fallback, sapl
   const [sA, sB] = flyRange;
   const rate = glideEndRate() / (sB - sA); // glide speed at either end, as a multiple of GLIDE per unit s
   let x, z, eye, yaw, pitch, fov;
+  let flyPitch; // the plain tip-down, which sets the close-up look (the dive only turns the gaze)
+  let shroomW = 0;
+  let shroomD = 0;
   if (s <= sA) {
     // tilt in: leave today's spline with its own velocity, descend and tip the nose straight down
     const d = sA - 3;
@@ -214,7 +238,25 @@ export function storyPose(s, { aspect = 16 / 9, flyRange = FLYCAM.fallback, sapl
     yaw = GLIDE_YAW + (f.yaw - GLIDE_YAW) * sstep(0.3, 1, t); // turns once the view is no longer vertical
     pitch = -90 + (f.pitch + 90) * revealCurve(t);
   }
-  return Object.assign(out, { x, y: groundAt(x, z) + eye, z, eye, yaw, pitch, fov, fly: flyOf(pitch) });
+  // the lucky fly agarics: dive low in front of them and run past just under their caps, keeping them in view
+  const k = FLYCAM.shroom;
+  const tt = tipSpan(s, sA, sB)[0];
+  const b = SHROOM ? bump(tt, k.from, k.to, k.peak) : 0;
+  if (b > 0) {
+    flyPitch = pitch;
+    x += PATCH.v.x * k.side * b;
+    z += PATCH.v.y * k.side * b;
+    eye += (k.low - eye) * b;
+    const dx = SHROOM.x - x;
+    const dz = SHROOM.z - z;
+    const dy = SHROOM.y - (groundAt(x, z) + eye);
+    const look = bump(tt, k.from, k.lookTo, k.lookPeak);
+    shroomW = look * k.pitch;
+    shroomD = Math.hypot(dx, dy, dz);
+    yaw += (rad2deg(Math.atan2(dx, -dz)) - yaw) * look * k.yaw;
+    pitch += (rad2deg(Math.atan2(dy, Math.hypot(dx, dz))) - pitch) * look * k.pitch;
+  }
+  return Object.assign(out, { x, y: groundAt(x, z) + eye, z, eye, yaw, pitch, fov, fly: flyOf(flyPitch ?? pitch), shroomW, shroomD });
 }
 
 /**
@@ -257,6 +299,13 @@ export function storyLook(s, pose, { flyRange = FLYCAM.fallback, saplingY = heig
     const { u, v } = toPatch(pose.x, pose.z);
     const r2 = ((u - hero.u) ** 2 + (v - hero.v) ** 2) / (FLYCAM.heroReach * FLYCAM.heroReach);
     l.focus -= FLYCAM.heroFocus * Math.exp(-r2) * fg;
+  }
+  // … onto the fly agarics while the camera dives in front of them, with a shallow macro depth of field …
+  if (pose.shroomW > 0) {
+    const w = pose.shroomW;
+    l.focus += (pose.shroomD - l.focus) * w;
+    l.dof += (FLY_LOOK.dof - l.dof) * w;
+    l.focusRange += (FLY_LOOK.focusRange - l.focusRange) * w;
   }
   // … then, after the glide, rack focus onto the sapling while the gaze lifts: the floor the rise rushes over
   // goes soft and the seedling sharpens before it starts to grow

@@ -2,7 +2,7 @@
 
 A portfolio that is also a walk through a Swedish forest on a summer morning. This version builds on the Opus forest and adds a layer of detail: silver birches close to the walk, young birches in the understory, tinder-fungus brackets, surface roots, dead snags, pebbles, boletes, fallen birch leaves and more dew. The first Fable version (a separate engine) is kept in `archive/fable-v1`.
 
-At the top you look up into the crowns of tall Scots pines and white-stemmed birches while warm sunlight breaks through them. As you scroll, the camera tilts down past the trunks, through shafts of light in the morning mist, into the undergrowth. It ends on the mossy forest floor, where a young oak grows from its acorn in a fleck of sunlight, covered in dew, next to the line **"Let us build something new together!"**
+At the top you look up into the crowns of tall Scots pines and white-stemmed birches while warm sunlight breaks through them. As you scroll, the camera tilts down past the trunks, through shafts of light in the morning mist, into the undergrowth. It ends on the mossy forest floor, where a young oak grows from its acorn in a fleck of sunlight, covered in dew, next to the line **"Let us build something great together."**
 
 Nothing in the scene is a photo or a downloaded model. Every tree, texture, sunbeam and dew drop is generated in real time in the browser with [three.js](https://threejs.org).
 
